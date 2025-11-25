@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>주문</title>
+  <link rel="stylesheet" href="/styles/common.css">
+  <style>
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .back-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    
+    .menu-list {
+      margin-bottom: 24px;
+    }
+    
+    .menu-card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .menu-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .menu-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .menu-price {
+      font-size: 16px;
+      color: #007bff;
+      font-weight: 600;
+    }
+    
+    .quantity-control {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    
+    .qty-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: 2px solid #ddd;
+      background: white;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .qty-btn:active {
+      background: #f0f0f0;
+    }
+    
+    .qty-display {
+      font-size: 20px;
+      font-weight: 600;
+      min-width: 40px;
+      text-align: center;
+    }
+    
+    .order-btn-container {
+      position: sticky;
+      bottom: 0;
+      background: white;
+      padding: 16px;
+      margin: 16px -16px -16px;
+      border-top: 1px solid #eee;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <h1 style="font-size: 24px; font-weight: bold;">주문</h1>
+    </div>
+    
+    <div id="menuList" class="menu-list">
+      <!-- 메뉴 리스트가 여기에 동적으로 추가됩니다 -->
+    </div>
+    
+    <div class="order-btn-container">
+      <button id="orderBtn" class="btn btn-primary" style="width: 100%;">주문등록</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/config/supabase.js';
+    import { getUrlParam } from '/utils/helpers.js';
+    import { formatPrice } from '/utils/helpers.js';
+
+    const tableNo = getUrlParam('table');
+    if (!tableNo) {
+      alert('테이블 번호가 없습니다.');
+      window.location.href = 'index.html';
+    }
+
+    const quantities = {};
+
+    // 판매 중인 메뉴 로드
+    async function loadMenus() {
+      try {
+        const { data, error } = await supabase
+          .from('menu')
+          .select('*')
+          .eq('sale_yn', 'Y')
+          .order('menu_name');
+
+        if (error) throw error;
+
+        const menuList = document.getElementById('menuList');
+        menuList.innerHTML = '';
+
+        if (data.length === 0) {
+          menuList.innerHTML = '<div class="text-center" style="padding: 24px; color: #999;">주문 가능한 메뉴가 없습니다.</div>';
+          return;
+        }
+
+        data.forEach(menu => {
+          quantities[menu.id] = 0;
+          const menuCard = document.createElement('div');
+          menuCard.className = 'menu-card';
+          menuCard.innerHTML = `
+            <div class="menu-header">
+              <div class="menu-name">${menu.menu_name}</div>
+              <div class="menu-price">${formatPrice(menu.price)}</div>
+            </div>
+            <div class="quantity-control">
+              <button class="qty-btn" onclick="decreaseQty(${menu.id})">-</button>
+              <div class="qty-display" id="qty-${menu.id}">0</div>
+              <button class="qty-btn" onclick="increaseQty(${menu.id})">+</button>
+            </div>
+          `;
+          menuList.appendChild(menuCard);
+        });
+      } catch (error) {
+        console.error('메뉴 로드 오류:', error);
+        alert('메뉴를 불러오는 중 오류가 발생했습니다.');
+      }
+    }
+
+    // 수량 증가
+    window.increaseQty = function(menuId) {
+      quantities[menuId] = (quantities[menuId] || 0) + 1;
+      document.getElementById(`qty-${menuId}`).textContent = quantities[menuId];
+    };
+
+    // 수량 감소
+    window.decreaseQty = function(menuId) {
+      if (quantities[menuId] > 0) {
+        quantities[menuId]--;
+        document.getElementById(`qty-${menuId}`).textContent = quantities[menuId];
+      }
+    };
+
+    // 뒤로가기
+    window.goBack = function() {
+      window.location.href = `customer.html?table=${encodeURIComponent(tableNo)}`;
+    };
+
+    // 주문등록
+    document.getElementById('orderBtn').addEventListener('click', async () => {
+      try {
+        // 메뉴 정보 가져오기
+        const { data: menus, error: menuError } = await supabase
+          .from('menu')
+          .select('*')
+          .eq('sale_yn', 'Y');
+
+        if (menuError) throw menuError;
+
+        // 주문할 항목 필터링
+        const orderItems = menus
+          .filter(menu => quantities[menu.id] > 0)
+          .map(menu => ({
+            table_no: tableNo,
+            menu_name: menu.menu_name,
+            price: menu.price,
+            qty: quantities[menu.id],
+            serve_yn: 'N',
+            pay_yn: 'N',
+            use_yn: 'Y'
+          }));
+
+        if (orderItems.length === 0) {
+          alert('주문할 메뉴를 선택해주세요.');
+          return;
+        }
+
+        const { error } = await supabase
+          .from('order')
+          .insert(orderItems);
+
+        if (error) throw error;
+
+        alert('주문이 등록되었습니다.');
+        window.location.href = `customer.html?table=${encodeURIComponent(tableNo)}`;
+      } catch (error) {
+        console.error('주문 등록 오류:', error);
+        alert('주문 등록 중 오류가 발생했습니다.');
+      }
+    });
+
+    // 초기 로드
+    loadMenus();
+  </script>
+</body>
+</html>
+

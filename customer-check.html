@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>주문확인</title>
+  <link rel="stylesheet" href="/styles/common.css">
+  <style>
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .back-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    
+    .order-list {
+      margin-bottom: 24px;
+    }
+    
+    .order-card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .order-menu-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .order-status {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .status-icon {
+      font-size: 20px;
+    }
+    
+    .order-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    
+    .order-subtotal {
+      text-align: right;
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #eee;
+    }
+    
+    .total-section {
+      background: #e7f3ff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 24px;
+      text-align: center;
+    }
+    
+    .total-label {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    
+    .total-amount {
+      font-size: 28px;
+      font-weight: bold;
+      color: #007bff;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: #999;
+    }
+    
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <h1 style="font-size: 24px; font-weight: bold;">주문확인</h1>
+    </div>
+    
+    <div id="orderList" class="order-list">
+      <!-- 주문 리스트가 여기에 동적으로 추가됩니다 -->
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/config/supabase.js';
+    import { getUrlParam } from '/utils/helpers.js';
+    import { formatPrice } from '/utils/helpers.js';
+
+    const tableNo = getUrlParam('table');
+    if (!tableNo) {
+      alert('테이블 번호가 없습니다.');
+      window.location.href = 'index.html';
+    }
+
+    // 주문 내역 로드
+    async function loadOrders() {
+      try {
+        const { data, error } = await supabase
+          .from('order')
+          .select('*')
+          .eq('table_no', tableNo)
+          .eq('use_yn', 'Y')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const orderList = document.getElementById('orderList');
+        orderList.innerHTML = '';
+
+        if (data.length === 0) {
+          orderList.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">📭</div>
+              <div>주문 내역이 없습니다.</div>
+            </div>
+          `;
+          return;
+        }
+
+        const total = data.reduce((sum, order) => sum + (order.price * order.qty), 0);
+
+        data.forEach(order => {
+          const orderCard = document.createElement('div');
+          orderCard.className = 'order-card';
+          orderCard.innerHTML = `
+            <div class="order-header">
+              <div class="order-menu-name">${order.menu_name}</div>
+              <div class="order-status">
+                ${order.serve_yn === 'Y' ? '<span class="status-icon" title="제공완료">✅</span>' : ''}
+                ${order.pay_yn === 'Y' ? '<span class="status-icon" title="결제완료">💰</span>' : ''}
+              </div>
+            </div>
+            <div class="order-info">
+              <span>가격: ${formatPrice(order.price)}</span>
+              <span>수량: ${order.qty}</span>
+            </div>
+            <div class="order-subtotal">
+              소계: ${formatPrice(order.price * order.qty)}
+            </div>
+          `;
+          orderList.appendChild(orderCard);
+        });
+
+        // 총합계 표시
+        const totalSection = document.createElement('div');
+        totalSection.className = 'total-section';
+        totalSection.innerHTML = `
+          <div class="total-label">총 합계</div>
+          <div class="total-amount">${formatPrice(total)}</div>
+        `;
+        orderList.appendChild(totalSection);
+      } catch (error) {
+        console.error('주문 로드 오류:', error);
+        alert('주문 내역을 불러오는 중 오류가 발생했습니다.');
+      }
+    }
+
+    // 뒤로가기
+    window.goBack = function() {
+      window.location.href = `customer.html?table=${encodeURIComponent(tableNo)}`;
+    };
+
+    // 초기 로드
+    loadOrders();
+
+    // 주기적 새로고침 (30초마다)
+    setInterval(loadOrders, 30000);
+  </script>
+</body>
+</html>
+

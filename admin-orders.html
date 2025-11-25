@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>테이블별 주문확인</title>
+  <link rel="stylesheet" href="/styles/common.css">
+  <style>
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .back-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    
+    .table-list {
+      margin-bottom: 24px;
+    }
+    
+    .table-item {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .table-item:active {
+      transform: scale(0.98);
+    }
+    
+    .table-number {
+      font-size: 20px;
+      font-weight: 600;
+      color: #007bff;
+    }
+    
+    .order-details {
+      display: none;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #eee;
+    }
+    
+    .order-details.active {
+      display: block;
+    }
+    
+    .order-item {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+    
+    .order-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .order-menu-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .order-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    
+    .order-status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .status-served {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    
+    .status-pending {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+    
+    .order-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    
+    .order-actions .btn {
+      flex: 1;
+      padding: 10px;
+      min-height: 44px;
+      font-size: 14px;
+    }
+    
+    .table-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    
+    .table-actions .btn {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <button class="back-btn" onclick="window.location.href='admin.html'">←</button>
+      <h1 style="font-size: 24px; font-weight: bold;">테이블별 주문확인</h1>
+    </div>
+    
+    <div id="tableList" class="table-list">
+      <!-- 테이블 리스트가 여기에 동적으로 추가됩니다 -->
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/config/supabase.js';
+    import { formatPrice } from '/utils/helpers.js';
+
+    // 주문이 있는 테이블 목록 로드
+    async function loadTables() {
+      try {
+        const { data, error } = await supabase
+          .from('order')
+          .select('table_no')
+          .eq('use_yn', 'Y')
+          .order('table_no');
+
+        if (error) throw error;
+
+        // 중복 제거
+        const uniqueTables = [...new Set(data.map(item => item.table_no))];
+
+        const tableList = document.getElementById('tableList');
+        tableList.innerHTML = '';
+
+        if (uniqueTables.length === 0) {
+          tableList.innerHTML = '<div class="text-center" style="padding: 24px; color: #999;">주문이 있는 테이블이 없습니다.</div>';
+          return;
+        }
+
+        for (const tableNo of uniqueTables) {
+          await renderTable(tableNo);
+        }
+      } catch (error) {
+        console.error('테이블 로드 오류:', error);
+        alert('테이블 목록을 불러오는 중 오류가 발생했습니다.');
+      }
+    }
+
+    // 테이블별 주문 렌더링
+    async function renderTable(tableNo) {
+      try {
+        const { data, error } = await supabase
+          .from('order')
+          .select('*')
+          .eq('table_no', tableNo)
+          .eq('use_yn', 'Y')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const tableList = document.getElementById('tableList');
+        const tableItem = document.createElement('div');
+        tableItem.className = 'table-item';
+        tableItem.innerHTML = `
+          <div class="table-number" onclick="toggleDetails('table-${tableNo}')">
+            테이블 ${tableNo} ▼
+          </div>
+          <div id="table-${tableNo}" class="order-details">
+            ${data.map(order => `
+              <div class="order-item">
+                <div class="order-item-header">
+                  <div class="order-menu-name">${order.menu_name}</div>
+                  <span class="order-status ${order.serve_yn === 'Y' ? 'status-served' : 'status-pending'}">
+                    ${order.serve_yn === 'Y' ? '제공완료' : '대기중'}
+                  </span>
+                </div>
+                <div class="order-info">
+                  <span>수량: ${order.qty}</span>
+                  <span>가격: ${formatPrice(order.price)}</span>
+                </div>
+                <div class="order-info">
+                  <span>소계: ${formatPrice(order.price * order.qty)}</span>
+                </div>
+                <div class="order-actions">
+                  <button class="btn btn-danger" onclick="cancelOrder(${order.id})">주문취소</button>
+                </div>
+              </div>
+            `).join('')}
+            <div class="table-actions">
+              <button class="btn btn-success" onclick="serveAll('${tableNo}')">제공완료</button>
+              <button class="btn btn-danger" onclick="cancelAll('${tableNo}')">전체 주문취소</button>
+            </div>
+          </div>
+        `;
+        tableList.appendChild(tableItem);
+      } catch (error) {
+        console.error('주문 로드 오류:', error);
+      }
+    }
+
+    // 상세 정보 토글
+    window.toggleDetails = function(tableId) {
+      const details = document.getElementById(tableId);
+      details.classList.toggle('active');
+      const header = details.previousElementSibling;
+      header.textContent = header.textContent.includes('▼') 
+        ? header.textContent.replace('▼', '▲')
+        : header.textContent.replace('▲', '▼');
+    };
+
+    // 제공완료 처리
+    window.serveAll = async function(tableNo) {
+      if (!confirm(`테이블 ${tableNo}의 모든 주문을 제공완료 처리하시겠습니까?`)) return;
+
+      try {
+        const { error } = await supabase
+          .from('order')
+          .update({ serve_yn: 'Y' })
+          .eq('table_no', tableNo)
+          .eq('use_yn', 'Y');
+
+        if (error) throw error;
+
+        alert('제공완료 처리되었습니다.');
+        location.reload();
+      } catch (error) {
+        console.error('제공완료 처리 오류:', error);
+        alert('제공완료 처리 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 전체 주문취소
+    window.cancelAll = async function(tableNo) {
+      if (!confirm(`테이블 ${tableNo}의 모든 주문을 취소하시겠습니까?`)) return;
+
+      try {
+        const { error } = await supabase
+          .from('order')
+          .update({ use_yn: 'N' })
+          .eq('table_no', tableNo)
+          .eq('use_yn', 'Y');
+
+        if (error) throw error;
+
+        alert('전체 주문이 취소되었습니다.');
+        location.reload();
+      } catch (error) {
+        console.error('주문취소 오류:', error);
+        alert('주문취소 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 개별 주문취소
+    window.cancelOrder = async function(orderId) {
+      if (!confirm('이 주문을 취소하시겠습니까?')) return;
+
+      try {
+        const { error } = await supabase
+          .from('order')
+          .update({ use_yn: 'N' })
+          .eq('id', orderId);
+
+        if (error) throw error;
+
+        alert('주문이 취소되었습니다.');
+        location.reload();
+      } catch (error) {
+        console.error('주문취소 오류:', error);
+        alert('주문취소 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 초기 로드
+    loadTables();
+  </script>
+</body>
+</html>
+

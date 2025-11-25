@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>음식확인</title>
+  <link rel="stylesheet" href="/styles/common.css">
+  <style>
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .back-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    
+    .menu-list {
+      margin-bottom: 24px;
+    }
+    
+    .menu-item {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .menu-item:active {
+      transform: scale(0.98);
+    }
+    
+    .menu-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .order-list {
+      display: none;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #eee;
+    }
+    
+    .order-list.active {
+      display: block;
+    }
+    
+    .order-card {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .order-table {
+      font-size: 16px;
+      font-weight: 600;
+      color: #007bff;
+    }
+    
+    .order-qty {
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .checkbox {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+    }
+    
+    .checkbox-label {
+      font-size: 14px;
+      color: #333;
+      cursor: pointer;
+    }
+    
+    .save-btn-container {
+      position: sticky;
+      bottom: 0;
+      background: white;
+      padding: 16px;
+      margin: 16px -16px -16px;
+      border-top: 1px solid #eee;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <button class="back-btn" onclick="window.location.href='admin.html'">←</button>
+      <h1 style="font-size: 24px; font-weight: bold;">음식확인</h1>
+    </div>
+    
+    <div id="menuList" class="menu-list">
+      <!-- 메뉴 리스트가 여기에 동적으로 추가됩니다 -->
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/config/supabase.js';
+
+    let selectedMenu = null;
+    let orders = [];
+
+    // 메뉴 목록 로드
+    async function loadMenus() {
+      try {
+        const { data, error } = await supabase
+          .from('menu')
+          .select('*')
+          .order('menu_name');
+
+        if (error) throw error;
+
+        const menuList = document.getElementById('menuList');
+        menuList.innerHTML = '';
+
+        if (data.length === 0) {
+          menuList.innerHTML = '<div class="text-center" style="padding: 24px; color: #999;">등록된 메뉴가 없습니다.</div>';
+          return;
+        }
+
+        data.forEach(menu => {
+          const menuItem = document.createElement('div');
+          menuItem.className = 'menu-item';
+          menuItem.innerHTML = `
+            <div class="menu-name" onclick="selectMenu('${menu.menu_name}')">
+              ${menu.menu_name} ▼
+            </div>
+            <div id="orders-${menu.id}" class="order-list"></div>
+          `;
+          menuList.appendChild(menuItem);
+        });
+      } catch (error) {
+        console.error('메뉴 로드 오류:', error);
+        alert('메뉴를 불러오는 중 오류가 발생했습니다.');
+      }
+    }
+
+    // 메뉴 선택
+    window.selectMenu = async function(menuName) {
+      selectedMenu = menuName;
+      
+      try {
+        const { data, error } = await supabase
+          .from('order')
+          .select('*')
+          .eq('menu_name', menuName)
+          .eq('use_yn', 'Y')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        orders = data;
+
+        // 모든 주문 리스트 닫기
+        document.querySelectorAll('.order-list').forEach(list => {
+          list.classList.remove('active');
+        });
+
+        // 해당 메뉴의 주문 리스트 표시
+        const menuItem = Array.from(document.querySelectorAll('.menu-name')).find(
+          el => el.textContent.includes(menuName)
+        );
+        if (menuItem) {
+          const orderList = menuItem.nextElementSibling;
+          orderList.classList.add('active');
+          
+          if (data.length === 0) {
+            orderList.innerHTML = '<div class="text-center" style="padding: 16px; color: #999;">주문이 없습니다.</div>';
+            return;
+          }
+
+          orderList.innerHTML = data.map(order => `
+            <div class="order-card">
+              <div class="order-header">
+                <div class="order-table">테이블 ${order.table_no}</div>
+                <div class="order-qty">수량: ${order.qty}</div>
+              </div>
+              <div class="checkbox-group">
+                <input 
+                  type="checkbox" 
+                  id="order-${order.id}" 
+                  class="checkbox"
+                  ${order.serve_yn === 'Y' ? 'checked' : ''}
+                  onchange="updateOrderStatus(${order.id}, this.checked)"
+                >
+                <label for="order-${order.id}" class="checkbox-label">제공완료</label>
+              </div>
+            </div>
+          `).join('') + `
+            <div class="save-btn-container">
+              <button class="btn btn-primary" style="width: 100%;" onclick="saveAll('${menuName}')">저장</button>
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('주문 로드 오류:', error);
+        alert('주문을 불러오는 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 주문 상태 업데이트 (체크박스 변경 시)
+    window.updateOrderStatus = function(orderId, checked) {
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        order.serve_yn = checked ? 'Y' : 'N';
+      }
+    };
+
+    // 전체 저장
+    window.saveAll = async function(menuName) {
+      try {
+        const updates = orders.map(order => ({
+          id: order.id,
+          serve_yn: order.serve_yn
+        }));
+
+        for (const update of updates) {
+          const { error } = await supabase
+            .from('order')
+            .update({ serve_yn: update.serve_yn })
+            .eq('id', update.id);
+
+          if (error) throw error;
+        }
+
+        alert('저장되었습니다.');
+        location.reload();
+      } catch (error) {
+        console.error('저장 오류:', error);
+        alert('저장 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 초기 로드
+    loadMenus();
+  </script>
+</body>
+</html>
+

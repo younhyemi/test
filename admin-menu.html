@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>메뉴관리</title>
+  <link rel="stylesheet" href="/styles/common.css">
+  <style>
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .back-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    
+    .form-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    
+    .menu-list {
+      margin-top: 24px;
+    }
+    
+    .menu-card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .menu-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .menu-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .menu-price {
+      font-size: 16px;
+      color: #007bff;
+      font-weight: 600;
+    }
+    
+    .menu-status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    
+    .status-sale {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    
+    .status-soldout {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    
+    .menu-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .menu-actions .btn {
+      flex: 1;
+      padding: 12px;
+      min-height: 48px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <button class="back-btn" onclick="window.location.href='admin.html'">←</button>
+      <h1 style="font-size: 24px; font-weight: bold;">메뉴관리</h1>
+    </div>
+    
+    <div class="form-card">
+      <div class="form-group">
+        <label class="form-label" for="menuName">메뉴명</label>
+        <input type="text" id="menuName" class="input" placeholder="메뉴명을 입력하세요">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label" for="menuPrice">가격</label>
+        <input type="number" id="menuPrice" class="input" placeholder="가격을 입력하세요" min="0">
+      </div>
+      
+      <button id="saveBtn" class="btn btn-primary" style="width: 100%;">저장</button>
+    </div>
+    
+    <div class="menu-list" id="menuList">
+      <!-- 메뉴 리스트가 여기에 동적으로 추가됩니다 -->
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/config/supabase.js';
+    import { formatPrice } from '/utils/helpers.js';
+
+    let editingMenuId = null;
+
+    // 메뉴 리스트 로드
+    async function loadMenus() {
+      try {
+        const { data, error } = await supabase
+          .from('menu')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const menuList = document.getElementById('menuList');
+        menuList.innerHTML = '';
+
+        if (data.length === 0) {
+          menuList.innerHTML = '<div class="text-center" style="padding: 24px; color: #999;">등록된 메뉴가 없습니다.</div>';
+          return;
+        }
+
+        data.forEach(menu => {
+          const menuCard = document.createElement('div');
+          menuCard.className = 'menu-card';
+          menuCard.innerHTML = `
+            <div class="menu-card-header">
+              <div class="menu-name">${menu.menu_name}</div>
+              <div class="menu-price">${formatPrice(menu.price)}</div>
+            </div>
+            <div class="menu-status ${menu.sale_yn === 'Y' ? 'status-sale' : 'status-soldout'}">
+              ${menu.sale_yn === 'Y' ? '판매중' : '마감'}
+            </div>
+            <div class="menu-actions">
+              <button class="btn btn-secondary" onclick="editMenu(${menu.id}, '${menu.menu_name}', ${menu.price})">수정</button>
+              <button class="btn btn-warning" onclick="toggleSale(${menu.id}, '${menu.sale_yn}')">
+                ${menu.sale_yn === 'Y' ? '마감' : '판매재개'}
+              </button>
+              <button class="btn btn-danger" onclick="deleteMenu(${menu.id})">삭제</button>
+            </div>
+          `;
+          menuList.appendChild(menuCard);
+        });
+      } catch (error) {
+        console.error('메뉴 로드 오류:', error);
+        alert('메뉴를 불러오는 중 오류가 발생했습니다.');
+      }
+    }
+
+    // 메뉴 저장
+    document.getElementById('saveBtn').addEventListener('click', async () => {
+      const menuName = document.getElementById('menuName').value.trim();
+      const menuPrice = parseInt(document.getElementById('menuPrice').value);
+
+      if (!menuName) {
+        alert('메뉴명을 입력해주세요.');
+        return;
+      }
+
+      if (!menuPrice || menuPrice < 0) {
+        alert('올바른 가격을 입력해주세요.');
+        return;
+      }
+
+      try {
+        if (editingMenuId) {
+          // 수정
+          const { error } = await supabase
+            .from('menu')
+            .update({
+              menu_name: menuName,
+              price: menuPrice
+            })
+            .eq('id', editingMenuId);
+
+          if (error) throw error;
+        } else {
+          // 신규 등록
+          const { error } = await supabase
+            .from('menu')
+            .insert({
+              menu_name: menuName,
+              price: menuPrice,
+              sale_yn: 'Y'
+            });
+
+          if (error) throw error;
+        }
+
+        // 폼 초기화
+        document.getElementById('menuName').value = '';
+        document.getElementById('menuPrice').value = '';
+        editingMenuId = null;
+        document.getElementById('saveBtn').textContent = '저장';
+
+        // 리스트 새로고침
+        await loadMenus();
+      } catch (error) {
+        console.error('메뉴 저장 오류:', error);
+        alert('메뉴 저장 중 오류가 발생했습니다.');
+      }
+    });
+
+    // 메뉴 수정
+    window.editMenu = function(id, name, price) {
+      editingMenuId = id;
+      document.getElementById('menuName').value = name;
+      document.getElementById('menuPrice').value = price;
+      document.getElementById('saveBtn').textContent = '수정';
+      document.getElementById('menuName').focus();
+    };
+
+    // 판매여부 토글
+    window.toggleSale = async function(id, currentSaleYn) {
+      const newSaleYn = currentSaleYn === 'Y' ? 'N' : 'Y';
+      const confirmMsg = newSaleYn === 'N' ? '이 메뉴를 마감하시겠습니까?' : '이 메뉴를 판매 재개하시겠습니까?';
+      
+      if (!confirm(confirmMsg)) return;
+
+      try {
+        const { error } = await supabase
+          .from('menu')
+          .update({ sale_yn: newSaleYn })
+          .eq('id', id);
+
+        if (error) throw error;
+
+        await loadMenus();
+      } catch (error) {
+        console.error('판매여부 변경 오류:', error);
+        alert('판매여부 변경 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 메뉴 삭제
+    window.deleteMenu = async function(id) {
+      if (!confirm('정말 이 메뉴를 삭제하시겠습니까?')) return;
+
+      try {
+        const { error } = await supabase
+          .from('menu')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        await loadMenus();
+      } catch (error) {
+        console.error('메뉴 삭제 오류:', error);
+        alert('메뉴 삭제 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 초기 로드
+    loadMenus();
+  </script>
+</body>
+</html>
+

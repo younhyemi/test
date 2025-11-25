@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>주문 시스템</title>
+  <link rel="stylesheet" href="/styles/common.css">
+  <style>
+    .main-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    
+    .logo {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 48px;
+      color: #007bff;
+    }
+    
+    .input-group {
+      width: 100%;
+      max-width: 400px;
+      margin-bottom: 24px;
+    }
+    
+    .input-label {
+      display: block;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="main-container">
+    <div class="logo">🍽️ 주문 시스템</div>
+    
+    <div class="input-group">
+      <label class="input-label" for="tableInput">테이블 번호</label>
+      <input 
+        type="text" 
+        id="tableInput" 
+        class="input" 
+        placeholder="테이블 번호를 입력하세요"
+        autocomplete="off"
+        autofocus
+      >
+    </div>
+    
+    <button id="enterBtn" class="btn btn-primary" style="width: 100%; max-width: 400px;">
+      입장하기
+    </button>
+  </div>
+
+  <script type="module">
+    import { getUrlParam } from '/utils/helpers.js';
+
+    // URL 파라미터에서 테이블 번호 가져오기 (QR 코드 지원)
+    const tableParam = getUrlParam('table');
+    if (tableParam) {
+      document.getElementById('tableInput').value = tableParam;
+    }
+
+    const tableInput = document.getElementById('tableInput');
+    const enterBtn = document.getElementById('enterBtn');
+
+    // 엔터키 지원
+    tableInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        enterBtn.click();
+      }
+    });
+
+    // 입장하기 버튼 클릭
+    enterBtn.addEventListener('click', () => {
+      const tableNo = tableInput.value.trim();
+      
+      if (!tableNo) {
+        alert('테이블 번호를 입력해주세요.');
+        return;
+      }
+
+      // "admin" 입력 시 관리자 페이지로 이동
+      if (tableNo.toLowerCase() === 'admin') {
+        window.location.href = 'admin.html';
+      } else {
+        // 그 외는 고객 페이지로 이동
+        window.location.href = `customer.html?table=${encodeURIComponent(tableNo)}`;
+      }
+    });
+  </script>
+</body>
+</html>
+

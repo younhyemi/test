@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>고객 페이지</title>
+  <link rel="stylesheet" href="/styles/common.css">
+  <style>
+    .customer-container {
+      padding: 24px 16px;
+    }
+    
+    .customer-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    
+    .customer-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    
+    .table-info {
+      font-size: 18px;
+      color: #007bff;
+      font-weight: 600;
+    }
+    
+    .menu-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    
+    .menu-item {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .menu-item:active {
+      transform: scale(0.98);
+    }
+    
+    .menu-item-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    
+    .menu-item-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="customer-container">
+    <div class="customer-header">
+      <h1 class="customer-title">주문 시스템</h1>
+      <div class="table-info" id="tableInfo">테이블 번호: -</div>
+    </div>
+    
+    <div class="menu-grid">
+      <div class="menu-item" data-page="order">
+        <div class="menu-item-icon">📝</div>
+        <div class="menu-item-title">주문</div>
+      </div>
+      
+      <div class="menu-item" data-page="check">
+        <div class="menu-item-icon">🔍</div>
+        <div class="menu-item-title">주문확인</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { getUrlParam } from '/utils/helpers.js';
+
+    const tableNo = getUrlParam('table');
+    
+    if (!tableNo) {
+      alert('테이블 번호가 없습니다.');
+      window.location.href = 'index.html';
+    }
+
+    document.getElementById('tableInfo').textContent = `테이블 번호: ${tableNo}`;
+
+    const menuItems = document.querySelectorAll('.menu-item');
+    
+    menuItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const page = item.dataset.page;
+        window.location.href = `customer-${page}.html?table=${encodeURIComponent(tableNo)}`;
+      });
+    });
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,18 @@
+{
+  "name": "mobile-order-system",
+  "version": "1.0.0",
+  "description": "모바일 웹 주문 시스템",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
+
