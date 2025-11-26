@@ -9,8 +9,32 @@
     .header {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 16px;
       margin-bottom: 24px;
+    }
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .refresh-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .refresh-btn:hover {
+      background: #e0e0e0;
     }
     
     .back-btn {
@@ -70,8 +94,11 @@
 <body>
   <div class="container">
     <div class="header">
-      <button class="back-btn" onclick="window.location.href='admin.html'">←</button>
-      <h1 style="font-size: 24px; font-weight: bold;">음식확인(서빙)</h1>
+      <div class="header-left">
+        <button class="back-btn" onclick="window.location.href='admin.html'">←</button>
+        <h1 style="font-size: 24px; font-weight: bold;">음식확인(서빙)</h1>
+      </div>
+      <button class="refresh-btn" onclick="location.reload()" title="새로고침">🔄</button>
     </div>
     
     <div id="orderList" class="order-list">
