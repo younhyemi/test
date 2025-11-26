@@ -218,6 +218,25 @@
             테이블 ${tableNo} (수량: ${totalQty}, 금액: ${formatPrice(total)}, 계산완료: ${formatPrice(paidTotal)}, 계산미완료: ${formatPrice(unpaidTotal)}) ▼
           </div>
           <div id="table-${tableNo}" class="order-details">
+            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+              <button class="btn btn-success payment-btn" style="flex: 1;" onclick="completePayment('${tableNo}')">전체 계산완료</button>
+              <button class="btn btn-orange payment-btn" style="flex: 1;" onclick="cancelPayment('${tableNo}')">전체 계산취소</button>
+            </div>
+            <div style="background: #e7f3ff; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+              <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">테이블별 금액 정보</div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px;">
+                <span>전체 총 금액:</span>
+                <span style="font-size: 18px; font-weight: bold;">${formatPrice(total)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px;">
+                <span>계산완료 금액:</span>
+                <span style="font-size: 18px; font-weight: bold; color: #0054FF;">${formatPrice(paidTotal)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                <span>계산미완료 금액:</span>
+                <span style="font-size: 18px; font-weight: bold; color: #FF0000;">${formatPrice(unpaidTotal)}</span>
+              </div>
+            </div>
             ${sortedData.map(order => `
               <div class="order-item">
                 <div class="order-item-header">
@@ -240,25 +259,6 @@
                 </div>
               </div>
             `).join('')}
-            <div style="background: #e7f3ff; border-radius: 8px; padding: 16px; margin-top: 16px;">
-              <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">테이블별 금액 정보</div>
-              <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px;">
-                <span>전체 총 금액:</span>
-                <span style="font-size: 18px; font-weight: bold;">${formatPrice(total)}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px;">
-                <span>계산완료 금액:</span>
-                <span style="font-size: 18px; font-weight: bold; color: #0054FF;">${formatPrice(paidTotal)}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                <span>계산미완료 금액:</span>
-                <span style="font-size: 18px; font-weight: bold; color: #FF0000;">${formatPrice(unpaidTotal)}</span>
-              </div>
-            </div>
-            <div style="display: flex; gap: 8px; margin-top: 16px;">
-              <button class="btn btn-success payment-btn" style="flex: 1;" onclick="completePayment('${tableNo}')">전체 계산완료</button>
-              <button class="btn btn-orange payment-btn" style="flex: 1;" onclick="cancelPayment('${tableNo}')">전체 계산취소</button>
-            </div>
           </div>
         `;
         tableList.appendChild(tableItem);
@@ -371,6 +371,25 @@
         if (orderDetails) {
           const isActive = orderDetails.classList.contains('active');
           orderDetails.innerHTML = `
+            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+              <button class="btn btn-success payment-btn" style="flex: 1;" onclick="completePayment('${tableNo}')">전체 계산완료</button>
+              <button class="btn btn-orange payment-btn" style="flex: 1;" onclick="cancelPayment('${tableNo}')">전체 계산취소</button>
+            </div>
+            <div style="background: #e7f3ff; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+              <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">테이블별 금액 정보</div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px;">
+                <span>전체 총 금액:</span>
+                <span style="font-size: 18px; font-weight: bold;">${formatPrice(total)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px;">
+                <span>계산완료 금액:</span>
+                <span style="font-size: 18px; font-weight: bold; color: #0054FF;">${formatPrice(paidTotal)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                <span>계산미완료 금액:</span>
+                <span style="font-size: 18px; font-weight: bold; color: #FF0000;">${formatPrice(unpaidTotal)}</span>
+              </div>
+            </div>
             ${sortedData.map(order => `
               <div class="order-item">
                 <div class="order-item-header">
@@ -393,25 +412,6 @@
                 </div>
               </div>
             `).join('')}
-            <div style="background: #e7f3ff; border-radius: 8px; padding: 16px; margin-top: 16px;">
-              <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">테이블별 금액 정보</div>
-              <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px;">
-                <span>전체 총 금액:</span>
-                <span style="font-size: 18px; font-weight: bold;">${formatPrice(total)}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px;">
-                <span>계산완료 금액:</span>
-                <span style="font-size: 18px; font-weight: bold; color: #0054FF;">${formatPrice(paidTotal)}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                <span>계산미완료 금액:</span>
-                <span style="font-size: 18px; font-weight: bold; color: #FF0000;">${formatPrice(unpaidTotal)}</span>
-              </div>
-            </div>
-            <div style="display: flex; gap: 8px; margin-top: 16px;">
-              <button class="btn btn-success payment-btn" style="flex: 1;" onclick="completePayment('${tableNo}')">전체 계산완료</button>
-              <button class="btn btn-orange payment-btn" style="flex: 1;" onclick="cancelPayment('${tableNo}')">전체 계산취소</button>
-            </div>
           `;
           if (isActive) {
             orderDetails.classList.add('active');

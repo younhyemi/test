@@ -89,9 +89,10 @@
         const { data: rawData, error } = await supabase
           .from('order')
           .select('*')
-          .eq('ready_yn', 'Y')
-          .eq('serve_yn', 'N')
-          .eq('use_yn', 'Y');
+          .or('and(category.in.(2,4), pay_yn.eq.Y),and(ready_yn.eq.Y, serve_yn.eq.N, use_yn.eq.Y)');
+//          .eq('ready_yn', 'Y')
+//          .eq('serve_yn', 'N')
+//          .eq('use_yn', 'Y');
 
         if (error) throw error;
 
