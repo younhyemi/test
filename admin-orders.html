@@ -142,7 +142,7 @@
 
   <script type="module">
     import { supabase } from '/config/supabase.js';
-    import { formatPrice } from '/utils/helpers.js';
+    import { formatPrice, formatDateTime } from '/utils/helpers.js';
 
     // 주문이 있는 테이블 목록 로드
     async function loadTables() {
@@ -178,12 +178,25 @@
     // 테이블별 주문 렌더링
     async function renderTable(tableNo) {
       try {
-        const { data, error } = await supabase
+        const { data: rawData, error } = await supabase
           .from('order')
           .select('*')
           .eq('table_no', tableNo)
-          .eq('use_yn', 'Y')
-          .order('created_at', { ascending: false });
+          .eq('use_yn', 'Y');
+
+        if (error) throw error;
+
+        // 정렬: 주문등록일시 → 메뉴명 순
+        const data = [...rawData].sort((a, b) => {
+          // 먼저 주문등록일시로 정렬
+          const dateA = new Date(a.order_at || a.created_at);
+          const dateB = new Date(b.order_at || b.created_at);
+          const dateCompare = dateA - dateB;
+          if (dateCompare !== 0) return dateCompare;
+          
+          // 주문등록일시가 같으면 메뉴명으로 정렬
+          return a.menu_name.localeCompare(b.menu_name);
+        });
 
         if (error) throw error;
 
@@ -210,13 +223,26 @@
                 <div class="order-info">
                   <span>소계: ${formatPrice(order.price * order.qty)}</span>
                 </div>
+                <div class="order-info">
+                  <span>주문등록일시: ${order.order_at ? formatDateTime(order.order_at) : '-'}</span>
+                </div>
+                <div class="order-info">
+                  <span>제공일시: ${order.serve_at ? formatDateTime(order.serve_at) : '-'}</span>
+                </div>
+                <div class="order-info">
+                  <span>계산여부: ${order.pay_yn === 'Y' ? '완료' : '미완료'}</span>
+                  <span>계산일시: ${order.pay_at ? formatDateTime(order.pay_at) : '-'}</span>
+                </div>
                 <div class="order-actions">
+                  <button class="btn btn-success" onclick="serveOrder(${order.id})">제공완료</button>
+                  <button class="btn btn-warning" onclick="cancelServe(${order.id})">제공취소</button>
                   <button class="btn btn-danger" onclick="cancelOrder(${order.id})">주문취소</button>
                 </div>
               </div>
             `).join('')}
             <div class="table-actions">
-              <button class="btn btn-success" onclick="serveAll('${tableNo}')">제공완료</button>
+              <button class="btn btn-success" onclick="serveAll('${tableNo}')">전체 제공완료</button>
+              <button class="btn btn-warning" onclick="cancelServeAll('${tableNo}')">전체 제공취소</button>
               <button class="btn btn-danger" onclick="cancelAll('${tableNo}')">전체 주문취소</button>
             </div>
           </div>
@@ -237,14 +263,63 @@
         : header.textContent.replace('▲', '▼');
     };
 
-    // 제공완료 처리
+    // 행별 제공완료 처리
+    window.serveOrder = async function(orderId) {
+      if (!confirm('이 주문을 제공완료 처리하시겠습니까?')) return;
+
+      try {
+        const { error } = await supabase
+          .from('order')
+          .update({ 
+            serve_yn: 'Y',
+            serve_at: new Date().toISOString()
+          })
+          .eq('id', orderId);
+
+        if (error) throw error;
+
+        alert('제공완료 처리되었습니다.');
+        location.reload();
+      } catch (error) {
+        console.error('제공완료 처리 오류:', error);
+        alert('제공완료 처리 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 행별 제공취소 처리
+    window.cancelServe = async function(orderId) {
+      if (!confirm('이 주문의 제공을 취소하시겠습니까?')) return;
+
+      try {
+        const { error } = await supabase
+          .from('order')
+          .update({ 
+            serve_yn: 'N',
+            serve_at: null
+          })
+          .eq('id', orderId);
+
+        if (error) throw error;
+
+        alert('제공취소 처리되었습니다.');
+        location.reload();
+      } catch (error) {
+        console.error('제공취소 처리 오류:', error);
+        alert('제공취소 처리 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 전체 제공완료 처리
     window.serveAll = async function(tableNo) {
       if (!confirm(`테이블 ${tableNo}의 모든 주문을 제공완료 처리하시겠습니까?`)) return;
 
       try {
         const { error } = await supabase
           .from('order')
-          .update({ serve_yn: 'Y' })
+          .update({ 
+            serve_yn: 'Y',
+            serve_at: new Date().toISOString()
+          })
           .eq('table_no', tableNo)
           .eq('use_yn', 'Y');
 
@@ -255,6 +330,30 @@
       } catch (error) {
         console.error('제공완료 처리 오류:', error);
         alert('제공완료 처리 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 전체 제공취소 처리
+    window.cancelServeAll = async function(tableNo) {
+      if (!confirm(`테이블 ${tableNo}의 모든 주문 제공을 취소하시겠습니까?`)) return;
+
+      try {
+        const { error } = await supabase
+          .from('order')
+          .update({ 
+            serve_yn: 'N',
+            serve_at: null
+          })
+          .eq('table_no', tableNo)
+          .eq('use_yn', 'Y');
+
+        if (error) throw error;
+
+        alert('전체 제공취소 처리되었습니다.');
+        location.reload();
+      } catch (error) {
+        console.error('제공취소 처리 오류:', error);
+        alert('제공취소 처리 중 오류가 발생했습니다.');
       }
     };
 

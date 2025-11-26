@@ -133,7 +133,8 @@
           .from('menu')
           .select('*')
           .eq('sale_yn', 'Y')
-          .order('menu_name');
+          .order('category', { ascending: true })
+          .order('menu_name', { ascending: true });
 
         if (error) throw error;
 
@@ -151,7 +152,10 @@
           menuCard.className = 'menu-card';
           menuCard.innerHTML = `
             <div class="menu-header">
-              <div class="menu-name">${menu.menu_name}</div>
+              <div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 4px;">${menu.category || ''}</div>
+                <div class="menu-name">${menu.menu_name}</div>
+              </div>
               <div class="menu-price">${formatPrice(menu.price)}</div>
             </div>
             <div class="quantity-control">
@@ -203,9 +207,11 @@
           .filter(menu => quantities[menu.id] > 0)
           .map(menu => ({
             table_no: tableNo,
+            category: menu.category || '',
             menu_name: menu.menu_name,
             price: menu.price,
             qty: quantities[menu.id],
+            order_at: new Date().toISOString(),
             serve_yn: 'N',
             pay_yn: 'N',
             use_yn: 'Y'

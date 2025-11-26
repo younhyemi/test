@@ -62,6 +62,12 @@
       margin-bottom: 12px;
     }
     
+    .menu-category {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    
     .menu-name {
       font-size: 18px;
       font-weight: 600;
@@ -115,6 +121,11 @@
     
     <div class="form-card">
       <div class="form-group">
+        <label class="form-label" for="category">구분명</label>
+        <input type="text" id="category" class="input" placeholder="구분명을 입력하세요">
+      </div>
+      
+      <div class="form-group">
         <label class="form-label" for="menuName">메뉴명</label>
         <input type="text" id="menuName" class="input" placeholder="메뉴명을 입력하세요">
       </div>
@@ -144,7 +155,8 @@
         const { data, error } = await supabase
           .from('menu')
           .select('*')
-          .order('created_at', { ascending: false });
+          .order('category', { ascending: true })
+          .order('menu_name', { ascending: true });
 
         if (error) throw error;
 
@@ -161,14 +173,17 @@
           menuCard.className = 'menu-card';
           menuCard.innerHTML = `
             <div class="menu-card-header">
-              <div class="menu-name">${menu.menu_name}</div>
+              <div>
+                <div class="menu-category">${menu.category || ''}</div>
+                <div class="menu-name">${menu.menu_name}</div>
+              </div>
               <div class="menu-price">${formatPrice(menu.price)}</div>
             </div>
             <div class="menu-status ${menu.sale_yn === 'Y' ? 'status-sale' : 'status-soldout'}">
               ${menu.sale_yn === 'Y' ? '판매중' : '마감'}
             </div>
             <div class="menu-actions">
-              <button class="btn btn-secondary" onclick="editMenu(${menu.id}, '${menu.menu_name}', ${menu.price})">수정</button>
+              <button class="btn btn-secondary" onclick="editMenu(${menu.id}, '${(menu.category || '').replace(/'/g, "\\'")}', '${menu.menu_name.replace(/'/g, "\\'")}', ${menu.price})">수정</button>
               <button class="btn btn-warning" onclick="toggleSale(${menu.id}, '${menu.sale_yn}')">
                 ${menu.sale_yn === 'Y' ? '마감' : '판매재개'}
               </button>
@@ -185,8 +200,14 @@
 
     // 메뉴 저장
     document.getElementById('saveBtn').addEventListener('click', async () => {
+      const category = document.getElementById('category').value.trim();
       const menuName = document.getElementById('menuName').value.trim();
       const menuPrice = parseInt(document.getElementById('menuPrice').value);
+
+      if (!category) {
+        alert('구분명을 입력해주세요.');
+        return;
+      }
 
       if (!menuName) {
         alert('메뉴명을 입력해주세요.');
@@ -204,6 +225,7 @@
           const { error } = await supabase
             .from('menu')
             .update({
+              category: category,
               menu_name: menuName,
               price: menuPrice
             })
@@ -215,6 +237,7 @@
           const { error } = await supabase
             .from('menu')
             .insert({
+              category: category,
               menu_name: menuName,
               price: menuPrice,
               sale_yn: 'Y'
@@ -224,6 +247,7 @@
         }
 
         // 폼 초기화
+        document.getElementById('category').value = '';
         document.getElementById('menuName').value = '';
         document.getElementById('menuPrice').value = '';
         editingMenuId = null;
@@ -238,12 +262,13 @@
     });
 
     // 메뉴 수정
-    window.editMenu = function(id, name, price) {
+    window.editMenu = function(id, category, name, price) {
       editingMenuId = id;
+      document.getElementById('category').value = category;
       document.getElementById('menuName').value = name;
       document.getElementById('menuPrice').value = price;
       document.getElementById('saveBtn').textContent = '수정';
-      document.getElementById('menuName').focus();
+      document.getElementById('category').focus();
     };
 
     // 판매여부 토글
@@ -262,6 +287,7 @@
         if (error) throw error;
 
         await loadMenus();
+        location.reload();
       } catch (error) {
         console.error('판매여부 변경 오류:', error);
         alert('판매여부 변경 중 오류가 발생했습니다.');
@@ -281,6 +307,7 @@
         if (error) throw error;
 
         await loadMenus();
+        location.reload();
       } catch (error) {
         console.error('메뉴 삭제 오류:', error);
         alert('메뉴 삭제 중 오류가 발생했습니다.');

@@ -122,7 +122,7 @@
   <script type="module">
     import { supabase } from '/config/supabase.js';
     import { getUrlParam } from '/utils/helpers.js';
-    import { formatPrice } from '/utils/helpers.js';
+    import { formatPrice, formatDateTime } from '/utils/helpers.js';
 
     const tableNo = getUrlParam('table');
     if (!tableNo) {
@@ -138,7 +138,8 @@
           .select('*')
           .eq('table_no', tableNo)
           .eq('use_yn', 'Y')
-          .order('created_at', { ascending: false });
+          .order('category', { ascending: true })
+          .order('menu_name', { ascending: true });
 
         if (error) throw error;
 
@@ -162,16 +163,32 @@
           orderCard.className = 'order-card';
           orderCard.innerHTML = `
             <div class="order-header">
-              <div class="order-menu-name">${order.menu_name}</div>
+              <div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 4px;">${order.category || ''}</div>
+                <div class="order-menu-name">${order.menu_name}</div>
+              </div>
               <div class="order-status">
                 ${order.serve_yn === 'Y' ? '<span class="status-icon" title="제공완료">✅</span>' : ''}
                 ${order.pay_yn === 'Y' ? '<span class="status-icon" title="결제완료">💰</span>' : ''}
               </div>
             </div>
             <div class="order-info">
-              <span>가격: ${formatPrice(order.price)}</span>
               <span>수량: ${order.qty}</span>
+              <span>가격: ${formatPrice(order.price)}</span>
             </div>
+            <div class="order-info" style="font-size: 12px; color: #666;">
+              주문등록일시: ${order.order_at ? formatDateTime(order.order_at) : '-'}
+            </div>
+            ${order.serve_yn === 'Y' && order.serve_at ? `
+              <div class="order-info" style="font-size: 12px; color: #28a745;">
+                제공일시: ${formatDateTime(order.serve_at)}
+              </div>
+            ` : ''}
+            ${order.pay_yn === 'Y' && order.pay_at ? `
+              <div class="order-info" style="font-size: 12px; color: #007bff;">
+                계산일시: ${formatDateTime(order.pay_at)}
+              </div>
+            ` : ''}
             <div class="order-subtotal">
               소계: ${formatPrice(order.price * order.qty)}
             </div>
@@ -183,7 +200,7 @@
         const totalSection = document.createElement('div');
         totalSection.className = 'total-section';
         totalSection.innerHTML = `
-          <div class="total-label">총 합계</div>
+          <div class="total-label">전체 합계 금액</div>
           <div class="total-amount">${formatPrice(total)}</div>
         `;
         orderList.appendChild(totalSection);

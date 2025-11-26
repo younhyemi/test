@@ -208,6 +208,9 @@
             <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
               주문등록일시: ${order.order_at ? formatDateTime(order.order_at) : '-'}
             </div>
+            <div style="font-size: 14px; margin-bottom: 8px;">
+              <span style="font-weight: bold; ${order.ready_yn === 'Y' ? 'color: #007bff;' : 'color: #dc3545;'}">준비여부: ${order.ready_yn === 'Y' ? '완료' : '미완료'}</span>
+            </div>
             <div style="display: flex; gap: 8px;">
               <button class="btn btn-success" style="flex: 1;" onclick="readyOrder(${order.id})">준비완료</button>
               <button class="btn btn-warning" style="flex: 1;" onclick="cancelReadyOrder(${order.id})">준비취소</button>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>음식확인(서빙)</title>
+  <link rel="stylesheet" href="/styles/common.css">
+  <style>
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .back-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    
+    .order-list {
+      margin-bottom: 24px;
+    }
+    
+    .order-card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .order-menu-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .order-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    
+    .order-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    
+    .order-actions .btn {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <button class="back-btn" onclick="window.location.href='admin.html'">←</button>
+      <h1 style="font-size: 24px; font-weight: bold;">음식확인(서빙)</h1>
+    </div>
+    
+    <div id="orderList" class="order-list">
+      <!-- 주문 리스트가 여기에 동적으로 추가됩니다 -->
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/config/supabase.js';
+    import { formatDateTime, formatPrice } from '/utils/helpers.js';
+
+    // 주문 목록 로드 (준비여부가 "Y"이면서 제공여부가 "N"인 내역)
+    async function loadOrders() {
+      try {
+        const { data: rawData, error } = await supabase
+          .from('order')
+          .select('*')
+          .eq('ready_yn', 'Y')
+          .eq('serve_yn', 'N')
+          .eq('use_yn', 'Y');
+
+        if (error) throw error;
+
+        // 정렬: 메뉴명 → 주문등록일시 → 테이블번호 순
+        const data = [...rawData].sort((a, b) => {
+          // 먼저 메뉴명으로 정렬
+          const menuCompare = a.menu_name.localeCompare(b.menu_name);
+          if (menuCompare !== 0) return menuCompare;
+          
+          // 메뉴명이 같으면 주문등록일시로 정렬
+          const dateA = new Date(a.order_at || a.created_at);
+          const dateB = new Date(b.order_at || b.created_at);
+          const dateCompare = dateA - dateB;
+          if (dateCompare !== 0) return dateCompare;
+          
+          // 주문등록일시도 같으면 테이블번호로 정렬
+          return a.table_no.localeCompare(b.table_no);
+        });
+
+        if (error) throw error;
+
+        const orderList = document.getElementById('orderList');
+        orderList.innerHTML = '';
+
+        if (data.length === 0) {
+          orderList.innerHTML = '<div class="text-center" style="padding: 24px; color: #999;">서빙할 음식이 없습니다.</div>';
+          return;
+        }
+
+        data.forEach(order => {
+          const orderCard = document.createElement('div');
+          orderCard.className = 'order-card';
+          orderCard.innerHTML = `
+            <div class="order-header">
+              <div class="order-menu-name">${order.menu_name}</div>
+            </div>
+            <div class="order-info">
+              <span>테이블: ${order.table_no}</span>
+              <span>수량: ${order.qty}</span>
+            </div>
+            <div class="order-info">
+              <span>가격: ${formatPrice(order.price)}</span>
+              <span>소계: ${formatPrice(order.price * order.qty)}</span>
+            </div>
+            <div class="order-info" style="font-size: 12px; color: #666;">
+              주문등록일시: ${order.order_at ? formatDateTime(order.order_at) : '-'}
+            </div>
+            <div class="order-actions">
+              <button class="btn btn-success" onclick="serveOrder(${order.id})">제공완료</button>
+              <button class="btn btn-warning" onclick="cancelServeOrder(${order.id})">제공취소</button>
+            </div>
+          `;
+          orderList.appendChild(orderCard);
+        });
+      } catch (error) {
+        console.error('주문 로드 오류:', error);
+        alert('주문을 불러오는 중 오류가 발생했습니다.');
+      }
+    }
+
+    // 제공완료 처리
+    window.serveOrder = async function(orderId) {
+      if (!confirm('이 주문을 제공완료 처리하시겠습니까?')) return;
+
+      try {
+        const { error } = await supabase
+          .from('order')
+          .update({ 
+            serve_yn: 'Y',
+            serve_at: new Date().toISOString()
+          })
+          .eq('id', orderId);
+
+        if (error) throw error;
+
+        alert('제공완료 처리되었습니다.');
+        location.reload();
+      } catch (error) {
+        console.error('제공완료 처리 오류:', error);
+        alert('제공완료 처리 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 제공취소 처리
+    window.cancelServeOrder = async function(orderId) {
+      if (!confirm('이 주문의 제공을 취소하시겠습니까?')) return;
+
+      try {
+        const { error } = await supabase
+          .from('order')
+          .update({ 
+            serve_yn: 'N',
+            serve_at: null
+          })
+          .eq('id', orderId);
+
+        if (error) throw error;
+
+        alert('제공취소 처리되었습니다.');
+        location.reload();
+      } catch (error) {
+        console.error('제공취소 처리 오류:', error);
+        alert('제공취소 처리 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 초기 로드
+    loadOrders();
+  </script>
+</body>
+</html>
+
