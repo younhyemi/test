@@ -294,9 +294,9 @@
           </div>
           <div id="table-${tableNo}" class="order-details">
             <div class="table-actions">
-              <button class="btn btn-success" onclick="serveAll('${tableNo}')">전체<br>제공완료</button>
-              <button class="btn btn-warning" onclick="cancelServeAll('${tableNo}')">전체<br>제공취소</button>
-              <button class="btn btn-danger" onclick="cancelAll('${tableNo}')">전체<br>주문취소</button>
+              <button class="btn btn-success" onclick="serveAll('${tableNo}')">전체 제공완료</button>
+              <button class="btn btn-warning" onclick="cancelServeAll('${tableNo}')">전체 제공취소</button>
+              <button class="btn btn-danger" onclick="cancelAll('${tableNo}')">전체 주문취소</button>
             </div>
             ${data.map(order => {
               const orderStatus = getSingleOrderStatus(order);
