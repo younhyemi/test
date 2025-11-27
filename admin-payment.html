@@ -274,15 +274,15 @@
                   <span>가격: ${formatPrice(order.price)}</span>
                 </div>
                 <div class="order-info">
-                  <span>소계: ${formatPrice(order.price * order.qty)}</span>
+                  <span>금액: ${formatPrice(order.price * order.qty)}</span>
                 </div>
                 <div class="order-info">
-                  <span style="font-weight: bold; ${order.pay_yn === 'Y' ? 'color: #007bff;' : 'color: #dc3545;'}">계산여부: ${order.pay_yn === 'Y' ? '완료' : '미완료'}</span>
+                  <span style="font-weight: bold; ${order.pay_yn === 'Y' ? 'color: #007bff;' : 'color: #dc3545;'}">계산: ${order.pay_yn === 'Y' ? '완료' : '미완료'}</span>
                   <span>계산일시: ${order.pay_at ? formatDateTime(order.pay_at) : '-'}</span>
                 </div>
                 <div style="display: flex; gap: 8px; margin-top: 8px;">
-                  <button class="btn btn-light-green" style="flex: 1; padding: 10px; font-size: 14px;" onclick="completePaymentOrder(${order.id}, '${tableNo}')">계산완료</button>
-                  <button class="btn btn-warning" style="flex: 1; padding: 10px; font-size: 14px;" onclick="cancelPaymentOrder(${order.id}, '${tableNo}')">계산취소</button>
+                  <button class="btn btn-success" style="flex: 1; padding: 10px; font-size: 14px;" onclick="completePaymentOrder(${order.id}, '${tableNo}')">계산완료</button>
+                  <button class="btn btn-orange" style="flex: 1; padding: 10px; font-size: 14px;" onclick="cancelPaymentOrder(${order.id}, '${tableNo}')">계산취소</button>
                 </div>
               </div>
             `).join('')}
@@ -445,12 +445,12 @@
                   <span>소계: ${formatPrice(order.price * order.qty)}</span>
                 </div>
                 <div class="order-info">
-                  <span style="font-weight: bold; ${order.pay_yn === 'Y' ? 'color: #007bff;' : 'color: #dc3545;'}">계산여부: ${order.pay_yn === 'Y' ? '완료' : '미완료'}</span>
+                  <span style="font-weight: bold; ${order.pay_yn === 'Y' ? 'color: #007bff;' : 'color: #dc3545;'}">계산: ${order.pay_yn === 'Y' ? '완료' : '미완료'}</span>
                   <span>계산일시: ${order.pay_at ? formatDateTime(order.pay_at) : '-'}</span>
                 </div>
                 <div style="display: flex; gap: 8px; margin-top: 8px;">
-                  <button class="btn btn-light-green" style="flex: 1; padding: 10px; font-size: 14px;" onclick="completePaymentOrder(${order.id}, '${tableNo}')">계산완료</button>
-                  <button class="btn btn-warning" style="flex: 1; padding: 10px; font-size: 14px;" onclick="cancelPaymentOrder(${order.id}, '${tableNo}')">계산취소</button>
+                  <button class="btn btn-success" style="flex: 1; padding: 10px; font-size: 14px;" onclick="completePaymentOrder(${order.id}, '${tableNo}')">계산완료</button>
+                  <button class="btn btn-orange" style="flex: 1; padding: 10px; font-size: 14px;" onclick="cancelPaymentOrder(${order.id}, '${tableNo}')">계산취소</button>
                 </div>
               </div>
             `).join('')}
