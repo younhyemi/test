@@ -57,6 +57,7 @@
       padding: 16px;
       margin-bottom: 12px;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      position: relative;
     }
     
     .order-header {
@@ -64,6 +65,16 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
+    }
+    
+    .order-card-status-badge {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
     }
     
     .order-menu-name {
@@ -129,6 +140,41 @@
       font-size: 64px;
       margin-bottom: 16px;
     }
+    
+    .order-status-badge {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    
+    .status-order-complete {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+    
+    .status-payment-complete {
+      background-color: #d1ecf1;
+      color: #0c5460;
+    }
+    
+    .status-ready-complete {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    
+    .status-serve-complete {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    
+    .cancel-all-btn {
+      width: 100%;
+      margin-top: 16px;
+    }
   </style>
 </head>
 <body>
@@ -157,6 +203,23 @@
       window.location.href = 'index.html';
     }
 
+    // 개별 주문 상태 계산
+    function getSingleOrderStatus(order) {
+      if (order.pay_yn === 'N') {
+        return { text: '주문완료', class: 'status-order-complete' };
+      }
+      if (order.pay_yn === 'Y' && order.ready_yn === 'N' && order.serve_yn === 'N') {
+        return { text: '계산완료', class: 'status-payment-complete' };
+      }
+      if (order.ready_yn === 'Y' && order.serve_yn === 'N') {
+        return { text: '조리완료', class: 'status-ready-complete' };
+      }
+      if (order.serve_yn === 'Y') {
+        return { text: '제공완료', class: 'status-serve-complete' };
+      }
+      return { text: '주문완료', class: 'status-order-complete' };
+    }
+
     // 주문 내역 로드
     async function loadOrders() {
       try {
@@ -165,7 +228,7 @@
           .select('*')
           .eq('table_no', tableNo)
           .eq('use_yn', 'Y')
-          .order('category', { ascending: true })
+          .order('order_at', { ascending: true })
           .order('menu_name', { ascending: true });
 
         if (error) throw error;
@@ -184,14 +247,21 @@
         }
 
         const total = data.reduce((sum, order) => sum + (order.price * order.qty), 0);
+        const unpaidTotal = data
+          .filter(order => order.pay_yn === 'N')
+          .reduce((sum, order) => sum + (order.price * order.qty), 0);
+        const paidTotal = data
+          .filter(order => order.pay_yn === 'Y')
+          .reduce((sum, order) => sum + (order.price * order.qty), 0);
 
         data.forEach(order => {
+          const orderStatus = getSingleOrderStatus(order);
           const orderCard = document.createElement('div');
           orderCard.className = 'order-card';
           orderCard.innerHTML = `
+            <div class="order-card-status-badge ${orderStatus.class}">${orderStatus.text}</div>
             <div class="order-header">
               <div>
-                <div style="font-size: 14px; color: #666; margin-bottom: 4px;">${order.category || ''}</div>
                 <div class="order-menu-name">${order.menu_name}</div>
               </div>
               <div class="order-status">
@@ -206,14 +276,14 @@
             <div class="order-info" style="font-size: 12px; color: #666;">
               주문등록일시: ${order.order_at ? formatDateTime(order.order_at) : '-'}
             </div>
-            ${order.serve_yn === 'Y' && order.serve_at ? `
-              <div class="order-info" style="font-size: 12px; color: #28a745;">
-                제공일시: ${formatDateTime(order.serve_at)}
-              </div>
-            ` : ''}
             ${order.pay_yn === 'Y' && order.pay_at ? `
               <div class="order-info" style="font-size: 12px; color: #007bff;">
                 계산일시: ${formatDateTime(order.pay_at)}
+              </div>
+            ` : ''}
+            ${order.serve_yn === 'Y' && order.serve_at ? `
+              <div class="order-info" style="font-size: 12px; color: #28a745;">
+                제공일시: ${formatDateTime(order.serve_at)}
               </div>
             ` : ''}
             <div class="order-subtotal">
@@ -229,13 +299,52 @@
         totalSection.innerHTML = `
           <div class="total-label">전체 합계 금액</div>
           <div class="total-amount">${formatPrice(total)}</div>
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #ddd;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px;">
+              <span>계산 미완료 금액:</span>
+              <span style="font-weight: 600; color: #dc3545;">${formatPrice(unpaidTotal)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 14px;">
+              <span>계산 완료 금액:</span>
+              <span style="font-weight: 600; color: #007bff;">${formatPrice(paidTotal)}</span>
+            </div>
+          </div>
         `;
         orderList.appendChild(totalSection);
+
+        // 전체주문취소 버튼
+        const cancelAllSection = document.createElement('div');
+        cancelAllSection.innerHTML = `
+          <button class="btn btn-danger cancel-all-btn" onclick="cancelAllOrders()">전체주문취소</button>
+        `;
+        orderList.appendChild(cancelAllSection);
       } catch (error) {
         console.error('주문 로드 오류:', error);
         alert('주문 내역을 불러오는 중 오류가 발생했습니다.');
       }
     }
+
+    // 전체주문취소
+    window.cancelAllOrders = async function() {
+      if (!confirm('계산 미완료 주문을 모두 취소하시겠습니까?')) return;
+
+      try {
+        const { error } = await supabase
+          .from('order')
+          .update({ use_yn: 'N' })
+          .eq('table_no', tableNo)
+          .eq('pay_yn', 'N')
+          .eq('use_yn', 'Y');
+
+        if (error) throw error;
+
+        alert('주문이 취소되었습니다.');
+        await loadOrders();
+      } catch (error) {
+        console.error('주문취소 오류:', error);
+        alert('주문취소 중 오류가 발생했습니다.');
+      }
+    };
 
     // 뒤로가기
     window.goBack = function() {

@@ -242,7 +242,7 @@
         tableItem.id = `table-item-${tableNo}`;
         tableItem.innerHTML = `
           <div class="table-number" onclick="toggleDetails('table-${tableNo}')" style="color: ${unpaidTotal > 0 ? '#dc3545' : '#007bff'};">
-            테이블 ${tableNo} (수량: ${totalQty}, 금액: ${formatPrice(total)}, 계산완료: ${formatPrice(paidTotal)}, 계산미완료: ${formatPrice(unpaidTotal)}) ▼
+            테이블 ${tableNo} (수량: ${totalQty}, 계산미완료: ${formatPrice(unpaidTotal)}) ▼
           </div>
           <div id="table-${tableNo}" class="order-details">
             <div style="display: flex; gap: 8px; margin-bottom: 16px;">
@@ -312,19 +312,34 @@
       if (!confirm('이 주문을 계산완료 처리하시겠습니까?')) return;
 
       try {
-        const { error } = await supabase
+        // 먼저 현재 주문의 계산여부 확인
+        const { data: orderData, error: checkError } = await supabase
           .from('order')
-          .update({ 
-            pay_yn: 'Y',
-            pay_at: new Date().toISOString()
-          })
-          .eq('id', orderId);
+          .select('pay_yn')
+          .eq('id', orderId)
+          .single();
 
-        if (error) throw error;
+        if (checkError) throw checkError;
 
-        alert('계산완료 처리되었습니다.');
-        // 해당 테이블만 다시 렌더링
-        await refreshTable(tableNo);
+        // 계산여부가 'N'인 경우에만 업데이트
+        if (orderData.pay_yn === 'N') {
+          const { error } = await supabase
+            .from('order')
+            .update({ 
+              pay_yn: 'Y',
+              pay_at: new Date().toISOString()
+            })
+            .eq('id', orderId)
+            .eq('pay_yn', 'N');
+
+          if (error) throw error;
+
+          alert('계산완료 처리되었습니다.');
+          // 해당 테이블만 다시 렌더링
+          await refreshTable(tableNo);
+        } else {
+          alert('이미 계산완료된 주문입니다.');
+        }
       } catch (error) {
         console.error('계산완료 처리 오류:', error);
         alert('계산완료 처리 중 오류가 발생했습니다.');
@@ -389,7 +404,7 @@
         // 테이블 헤더 업데이트
         const tableHeader = document.querySelector(`#table-item-${tableNo} .table-number`);
         if (tableHeader) {
-          tableHeader.innerHTML = `테이블 ${tableNo} (수량: ${totalQty}, 금액: ${formatPrice(total)}, 계산완료: ${formatPrice(paidTotal)}, 계산미완료: ${formatPrice(unpaidTotal)}) ▼`;
+          tableHeader.innerHTML = `테이블 ${tableNo} (수량: ${totalQty}, 계산미완료: ${formatPrice(unpaidTotal)}) ▼`;
           tableHeader.style.color = unpaidTotal > 0 ? '#dc3545' : '#007bff';
         }
 
@@ -452,7 +467,7 @@
 
     // 테이블별 계산완료 처리
     window.completePayment = async function(tableNo) {
-      if (!confirm(`테이블 ${tableNo}의 모든 주문을 계산완료 처리하시겠습니까?`)) return;
+      if (!confirm(`테이블 ${tableNo}의 계산 미완료 주문을 모두 계산완료 처리하시겠습니까?`)) return;
 
       try {
         const { error } = await supabase
@@ -462,6 +477,7 @@
             pay_at: new Date().toISOString()
           })
           .eq('table_no', tableNo)
+          .eq('pay_yn', 'N')
           .eq('use_yn', 'Y');
 
         if (error) throw error;

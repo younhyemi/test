@@ -209,17 +209,17 @@
               주문등록일시: ${order.order_at ? formatDateTime(order.order_at) : '-'}
             </div>
             <div style="display: flex; gap: 8px;">
-              <button class="btn btn-success" style="flex: 1;" onclick="readyOrder(${order.id})">준비완료</button>
-              <button class="btn btn-warning" style="flex: 1;" onclick="cancelReadyOrder(${order.id})">준비취소</button>
+              <button class="btn btn-success" style="flex: 1;" onclick="readyOrder(${order.id})">조리완료</button>
+              <button class="btn btn-warning" style="flex: 1;" onclick="cancelReadyOrder(${order.id})">조리취소</button>
             </div>
           </div>
         `).join('');
       }
     };
 
-    // 준비완료 처리
+    // 조리완료 처리
     window.readyOrder = async function(orderId) {
-      if (!confirm('이 주문을 준비완료 처리하시겠습니까?')) return;
+      if (!confirm('이 주문을 조리완료 처리하시겠습니까?')) return;
 
       try {
         const { error } = await supabase
@@ -231,17 +231,17 @@
 
         if (error) throw error;
 
-        alert('준비완료 처리되었습니다.');
+        alert('조리완료 처리되었습니다.');
         location.reload();
       } catch (error) {
-        console.error('준비완료 처리 오류:', error);
-        alert('준비완료 처리 중 오류가 발생했습니다.');
+        console.error('조리완료 처리 오류:', error);
+        alert('조리완료 처리 중 오류가 발생했습니다.');
       }
     };
 
-    // 준비취소 처리
+    // 조리취소 처리
     window.cancelReadyOrder = async function(orderId) {
-      if (!confirm('이 주문의 준비를 취소하시겠습니까?')) return;
+      if (!confirm('이 주문의 조리를 취소하시겠습니까?')) return;
 
       try {
         const { error } = await supabase
@@ -253,11 +253,11 @@
 
         if (error) throw error;
 
-        alert('준비취소 처리되었습니다.');
+        alert('조리취소 처리되었습니다.');
         location.reload();
       } catch (error) {
-        console.error('준비취소 처리 오류:', error);
-        alert('준비취소 처리 중 오류가 발생했습니다.');
+        console.error('조리취소 처리 오류:', error);
+        alert('조리취소 처리 중 오류가 발생했습니다.');
       }
     };
 

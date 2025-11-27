@@ -131,15 +131,14 @@
     let selectedMenu = null;
     let orders = [];
 
-    // 메뉴 목록 로드 (계산완료이면서 제공되지 않은 항목)
+    // 메뉴 목록 로드 (조리필요여부가 Y이면서 계산완료이고 제공되지 않은 항목)
     async function loadMenus() {
       try {
-        // 계산완료이면서 제공되지 않은 주문 조회
+        // 조리필요여부가 Y이면서 계산완료이고 제공되지 않은 주문 조회
         const { data: orders, error: orderError } = await supabase
           .from('order')
           .select('*')
-          .neq('category', '2')  //2.주류
-          .neq('category', '4')  //4.음료
+          .eq('cook_required_yn', 'Y')
           .eq('pay_yn', 'Y')
           .eq('serve_yn', 'N')
           .eq('use_yn', 'Y');
@@ -238,20 +237,20 @@
               주문등록일시: ${order.order_at ? formatDateTime(order.order_at) : '-'}
             </div>
             <div style="font-size: 14px; margin-bottom: 8px;">
-              <span style="font-weight: bold; ${order.ready_yn === 'Y' ? 'color: #007bff;' : 'color: #dc3545;'}">준비여부: ${order.ready_yn === 'Y' ? '완료' : '미완료'}</span>
+              <span style="font-weight: bold; ${order.ready_yn === 'Y' ? 'color: #007bff;' : 'color: #dc3545;'}">조리여부: ${order.ready_yn === 'Y' ? '완료' : '미완료'}</span>
             </div>
             <div style="display: flex; gap: 8px;">
-              <button class="btn btn-success" style="flex: 1;" onclick="readyOrder(${order.id})">준비완료</button>
-              <button class="btn btn-warning" style="flex: 1;" onclick="cancelReadyOrder(${order.id})">준비취소</button>
+              <button class="btn btn-success" style="flex: 1;" onclick="readyOrder(${order.id})">조리완료</button>
+              <button class="btn btn-warning" style="flex: 1;" onclick="cancelReadyOrder(${order.id})">조리취소</button>
             </div>
           </div>
         `).join('');
       }
     };
 
-    // 준비완료 처리
+    // 조리완료 처리
     window.readyOrder = async function(orderId) {
-      if (!confirm('이 주문을 준비완료 처리하시겠습니까?')) return;
+      if (!confirm('이 주문을 조리완료 처리하시겠습니까?')) return;
 
       try {
         const { error } = await supabase
@@ -263,17 +262,17 @@
 
         if (error) throw error;
 
-        alert('준비완료 처리되었습니다.');
+        alert('조리완료 처리되었습니다.');
         location.reload();
       } catch (error) {
-        console.error('준비완료 처리 오류:', error);
-        alert('준비완료 처리 중 오류가 발생했습니다.');
+        console.error('조리완료 처리 오류:', error);
+        alert('조리완료 처리 중 오류가 발생했습니다.');
       }
     };
 
-    // 준비취소 처리
+    // 조리취소 처리
     window.cancelReadyOrder = async function(orderId) {
-      if (!confirm('이 주문의 준비를 취소하시겠습니까?')) return;
+      if (!confirm('이 주문의 조리를 취소하시겠습니까?')) return;
 
       try {
         const { error } = await supabase
@@ -285,11 +284,11 @@
 
         if (error) throw error;
 
-        alert('준비취소 처리되었습니다.');
+        alert('조리취소 처리되었습니다.');
         location.reload();
       } catch (error) {
-        console.error('준비취소 처리 오류:', error);
-        alert('준비취소 처리 중 오류가 발생했습니다.');
+        console.error('조리취소 처리 오류:', error);
+        alert('조리취소 처리 중 오류가 발생했습니다.');
       }
     };
 

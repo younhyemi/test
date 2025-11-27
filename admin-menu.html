@@ -123,6 +123,23 @@
       color: #721c24;
     }
     
+    .status-cook-required {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+    
+    .status-cook-not-required {
+      background-color: #d1ecf1;
+      color: #0c5460;
+    }
+    
+    .menu-status-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    
     .menu-actions {
       display: flex;
       gap: 8px;
@@ -160,6 +177,13 @@
       <div class="form-group">
         <label class="form-label" for="menuPrice">가격</label>
         <input type="number" id="menuPrice" class="input" placeholder="가격을 입력하세요" min="0">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="cookRequired" checked style="width: 20px; height: 20px;">
+          조리필요여부
+        </label>
       </div>
       
       <button id="saveBtn" class="btn btn-primary" style="width: 100%;">저장</button>
@@ -206,11 +230,16 @@
               </div>
               <div class="menu-price">${formatPrice(menu.price)}</div>
             </div>
-            <div class="menu-status ${menu.sale_yn === 'Y' ? 'status-sale' : 'status-soldout'}">
-              ${menu.sale_yn === 'Y' ? '판매중' : '마감'}
+            <div class="menu-status-group">
+              <div class="menu-status ${menu.sale_yn === 'Y' ? 'status-sale' : 'status-soldout'}">
+                ${menu.sale_yn === 'Y' ? '판매중' : '마감'}
+              </div>
+              <div class="menu-status ${(menu.cook_required_yn || 'Y') === 'Y' ? 'status-cook-required' : 'status-cook-not-required'}">
+                조리필요여부: ${(menu.cook_required_yn || 'Y') === 'Y' ? 'Y' : 'N'}
+              </div>
             </div>
             <div class="menu-actions">
-              <button class="btn btn-secondary" onclick="editMenu(${menu.id}, '${(menu.category || '').replace(/'/g, "\\'")}', '${menu.menu_name.replace(/'/g, "\\'")}', ${menu.price})">수정</button>
+              <button class="btn btn-secondary" onclick="editMenu(${menu.id}, '${(menu.category || '').replace(/'/g, "\\'")}', '${menu.menu_name.replace(/'/g, "\\'")}', ${menu.price}, '${menu.cook_required_yn || 'Y'}')">수정</button>
               <button class="btn btn-warning" onclick="toggleSale(${menu.id}, '${menu.sale_yn}')">
                 ${menu.sale_yn === 'Y' ? '마감' : '판매재개'}
               </button>
@@ -230,6 +259,7 @@
       const category = document.getElementById('category').value.trim();
       const menuName = document.getElementById('menuName').value.trim();
       const menuPrice = parseInt(document.getElementById('menuPrice').value);
+      const cookRequired = document.getElementById('cookRequired').checked ? 'Y' : 'N';
 
       if (!category) {
         alert('구분명을 입력해주세요.');
@@ -254,7 +284,8 @@
             .update({
               category: category,
               menu_name: menuName,
-              price: menuPrice
+              price: menuPrice,
+              cook_required_yn: cookRequired
             })
             .eq('id', editingMenuId);
 
@@ -267,7 +298,8 @@
               category: category,
               menu_name: menuName,
               price: menuPrice,
-              sale_yn: 'Y'
+              sale_yn: 'Y',
+              cook_required_yn: cookRequired
             });
 
           if (error) throw error;
@@ -277,6 +309,7 @@
         document.getElementById('category').value = '';
         document.getElementById('menuName').value = '';
         document.getElementById('menuPrice').value = '';
+        document.getElementById('cookRequired').checked = true;
         editingMenuId = null;
         document.getElementById('saveBtn').textContent = '저장';
 
@@ -289,11 +322,12 @@
     });
 
     // 메뉴 수정
-    window.editMenu = function(id, category, name, price) {
+    window.editMenu = function(id, category, name, price, cookRequiredYn) {
       editingMenuId = id;
       document.getElementById('category').value = category;
       document.getElementById('menuName').value = name;
       document.getElementById('menuPrice').value = price;
+      document.getElementById('cookRequired').checked = (cookRequiredYn === 'Y' || cookRequiredYn === undefined);
       document.getElementById('saveBtn').textContent = '수정';
       document.getElementById('category').focus();
     };

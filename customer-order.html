@@ -180,7 +180,6 @@
           menuCard.innerHTML = `
             <div class="menu-header">
               <div>
-                <div style="font-size: 14px; color: #666; margin-bottom: 4px;">${menu.category || ''}</div>
                 <div class="menu-name">${menu.menu_name}</div>
               </div>
               <div class="menu-price">${formatPrice(menu.price)}</div>
@@ -241,7 +240,8 @@
             order_at: new Date().toISOString(),
             serve_yn: 'N',
             pay_yn: 'N',
-            use_yn: 'Y'
+            use_yn: 'Y',
+            cook_required_yn: menu.cook_required_yn || 'Y'
           }));
 
         if (orderItems.length === 0) {
