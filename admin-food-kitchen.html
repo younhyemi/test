@@ -107,6 +107,44 @@
       color: #666;
     }
     
+    .filter-section {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    
+    .filter-select {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      background: white;
+    }
+    
+    .search-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #007bff;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .search-btn:hover {
+      background: #0056b3;
+    }
+    
   </style>
 </head>
 <body>
@@ -117,6 +155,13 @@
         <h1 style="font-size: 24px; font-weight: bold;">음식확인(주방)</h1>
       </div>
       <button class="refresh-btn" onclick="location.reload()" title="새로고침">🔄</button>
+    </div>
+    
+    <div class="filter-section">
+      <select id="menuFilter" class="filter-select">
+        <option value="">전체</option>
+      </select>
+      <button class="search-btn" onclick="filterMenus()" title="검색">🔍</button>
     </div>
     
     <div id="menuList" class="menu-list">
@@ -130,18 +175,56 @@
 
     let selectedMenu = null;
     let orders = [];
+    let allMenuNames = [];
+    let autoExpandMenu = null; // 자동으로 열어야 할 메뉴명
+
+    // 조리필요여부가 Y인 메뉴 리스트 가져오기
+    async function loadMenuNames() {
+      try {
+        const { data: menuData, error: menuError } = await supabase
+          .from('menu')
+          .select('menu_name')
+          .eq('cook_required_yn', 'Y')
+          .order('menu_name', { ascending: true });
+
+        if (menuError) throw menuError;
+
+        allMenuNames = menuData.map(m => m.menu_name);
+        
+        // 콤보박스에 메뉴 추가
+        const menuFilter = document.getElementById('menuFilter');
+        menuFilter.innerHTML = '<option value="">전체</option>';
+        allMenuNames.forEach(menuName => {
+          const option = document.createElement('option');
+          option.value = menuName;
+          option.textContent = menuName;
+          menuFilter.appendChild(option);
+        });
+      } catch (error) {
+        console.error('메뉴명 로드 오류:', error);
+      }
+    }
 
     // 메뉴 목록 로드 (조리필요여부가 Y이면서 계산완료이고 제공되지 않은 항목)
-    async function loadMenus() {
+    async function loadMenus(filterMenuName = null) {
       try {
         // 조리필요여부가 Y이면서 계산완료이고 제공되지 않은 주문 조회
-        const { data: orders, error: orderError } = await supabase
+        let query = supabase
           .from('order')
           .select('*')
           .eq('cook_required_yn', 'Y')
           .eq('pay_yn', 'Y')
           .eq('serve_yn', 'N')
           .eq('use_yn', 'Y');
+
+        // 특정 메뉴 필터링
+        if (filterMenuName) {
+          query = query.eq('menu_name', filterMenuName);
+        }
+
+        const { data: orders, error: orderError } = await query;
+
+        if (orderError) throw orderError;
 
         if (orderError) throw orderError;
 
@@ -175,6 +258,7 @@
         sortedMenus.forEach((menuGroup, index) => {
           const menuItem = document.createElement('div');
           menuItem.className = 'menu-item';
+          const menuId = `menu-${index}`;
           menuItem.innerHTML = `
             <div class="menu-name" onclick="selectMenu('${menuGroup.menu_name.replace(/'/g, "\\'")}')">
               ${menuGroup.menu_name} (총 ${menuGroup.total_qty}개) ▼
@@ -186,6 +270,14 @@
 
         // 메뉴 그룹 정보 저장
         window.menuGroups = sortedMenus;
+
+        // 특정 메뉴 필터링 시 자동으로 트리 열기
+        if (autoExpandMenu) {
+          setTimeout(() => {
+            selectMenu(autoExpandMenu, true);
+            autoExpandMenu = null;
+          }, 100);
+        }
       } catch (error) {
         console.error('메뉴 로드 오류:', error);
         alert('메뉴를 불러오는 중 오류가 발생했습니다.');
@@ -193,7 +285,7 @@
     }
 
     // 메뉴 선택
-    window.selectMenu = async function(menuName) {
+    window.selectMenu = async function(menuName, autoExpand = false) {
       selectedMenu = menuName;
       
       // 메뉴 그룹에서 해당 메뉴 찾기
@@ -209,10 +301,12 @@
 
       orders = menuGroup.orders;
 
-      // 모든 주문 리스트 닫기
-      document.querySelectorAll('.order-list').forEach(list => {
-        list.classList.remove('active');
-      });
+      // 모든 주문 리스트 닫기 (자동 확장이 아닌 경우에만)
+      if (!autoExpand) {
+        document.querySelectorAll('.order-list').forEach(list => {
+          list.classList.remove('active');
+        });
+      }
 
       // 해당 메뉴의 주문 리스트 표시
       const menuItem = Array.from(document.querySelectorAll('.menu-name')).find(
@@ -246,6 +340,20 @@
           </div>
         `).join('');
       }
+    };
+
+    // 필터링 함수
+    window.filterMenus = async function() {
+      const selectedMenuName = document.getElementById('menuFilter').value;
+      
+      if (selectedMenuName) {
+        // 특정 메뉴 선택 시 자동으로 트리 열기
+        autoExpandMenu = selectedMenuName;
+      } else {
+        autoExpandMenu = null;
+      }
+      
+      await loadMenus(selectedMenuName || null);
     };
 
     // 조리완료 처리
@@ -293,6 +401,7 @@
     };
 
     // 초기 로드
+    loadMenuNames();
     loadMenus();
   </script>
 </body>
