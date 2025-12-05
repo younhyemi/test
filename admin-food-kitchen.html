@@ -215,7 +215,8 @@
           .eq('cook_required_yn', 'Y')
           .eq('pay_yn', 'Y')
           .eq('serve_yn', 'N')
-          .eq('use_yn', 'Y');
+          .eq('use_yn', 'Y')
+          .order('pay_at', { ascending: true });
 
         // 특정 메뉴 필터링
         if (filterMenuName) {
@@ -249,6 +250,15 @@
           menuList.innerHTML = '<div class="text-center" style="padding: 24px; color: #999;">확인할 음식이 없습니다.</div>';
           return;
         }
+
+        // 각 메뉴 그룹의 주문들을 결제일시별로 정렬
+        Object.values(menuGroups).forEach(menuGroup => {
+          menuGroup.orders.sort((a, b) => {
+            const dateA = new Date(a.pay_at || a.created_at);
+            const dateB = new Date(b.pay_at || b.created_at);
+            return dateA - dateB;
+          });
+        });
 
         // 메뉴명 순으로 정렬
         const sortedMenus = Object.values(menuGroups).sort((a, b) => 
@@ -292,10 +302,10 @@
       const menuGroup = window.menuGroups?.find(mg => mg.menu_name === menuName);
       if (!menuGroup) return;
 
-      // 주문등록일시 오름차순 정렬
+      // 결제일시 오름차순 정렬
       menuGroup.orders.sort((a, b) => {
-        const dateA = new Date(a.order_at || a.created_at);
-        const dateB = new Date(b.order_at || b.created_at);
+        const dateA = new Date(a.pay_at || a.created_at);
+        const dateB = new Date(b.pay_at || b.created_at);
         return dateA - dateB;
       });
 
@@ -328,7 +338,7 @@
               <div class="order-qty">수량: ${order.qty}</div>
             </div>
             <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
-              주문등록일시: ${order.order_at ? formatDateTime(order.order_at) : '-'}
+              결제일시: ${order.pay_at ? formatDateTime(order.pay_at) : '-'}
             </div>
             <div style="font-size: 14px; margin-bottom: 8px;">
               <span style="font-weight: bold; ${order.ready_yn === 'Y' ? 'color: #007bff;' : 'color: #dc3545;'}">조리여부: ${order.ready_yn === 'Y' ? '완료' : '미완료'}</span>

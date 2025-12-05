@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>화면관리</title>
+  <link rel="stylesheet" href="/styles/common.css">
+  <style>
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .refresh-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .refresh-btn:hover {
+      background: #e0e0e0;
+    }
+    
+    .back-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    
+    .screen-list {
+      margin-bottom: 24px;
+    }
+    
+    .screen-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .screen-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .screen-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .screen-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    
+    .use-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .use-toggle input[type="checkbox"] {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+    }
+    
+    .order-input {
+      width: 80px;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      text-align: center;
+    }
+    
+    .save-btn {
+      padding: 8px 16px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .save-btn:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-left">
+        <button class="back-btn" onclick="window.location.href='admin.html'">←</button>
+        <h1 style="font-size: 24px; font-weight: bold;">화면관리</h1>
+      </div>
+      <button class="refresh-btn" onclick="location.reload()" title="새로고침">🔄</button>
+    </div>
+    
+    <div id="screenList" class="screen-list">
+      <!-- 화면 리스트가 여기에 동적으로 추가됩니다 -->
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/config/supabase.js';
+
+    // 화면 목록 로드
+    async function loadScreens() {
+      try {
+        const { data, error } = await supabase
+          .from('screen_management')
+          .select('*')
+          .order('display_order', { ascending: true });
+
+        if (error) throw error;
+
+        const screenList = document.getElementById('screenList');
+        screenList.innerHTML = '';
+
+        if (data.length === 0) {
+          screenList.innerHTML = '<div class="text-center" style="padding: 24px; color: #999;">등록된 화면이 없습니다.</div>';
+          return;
+        }
+
+        data.forEach(screen => {
+          const screenCard = document.createElement('div');
+          screenCard.className = 'screen-card';
+          screenCard.innerHTML = `
+            <div class="screen-header">
+              <div class="screen-name">${screen.screen_name}</div>
+              <div class="screen-controls">
+                <div class="use-toggle">
+                  <label>사용여부:</label>
+                  <input type="checkbox" id="use-${screen.id}" ${screen.use_yn === 'Y' ? 'checked' : ''} onchange="updateUseYn(${screen.id}, this.checked)">
+                </div>
+                <div>
+                  <label>순서:</label>
+                  <input type="number" id="order-${screen.id}" class="order-input" value="${screen.display_order}" min="0" onchange="updateOrder(${screen.id}, this.value)">
+                </div>
+                <button class="save-btn" onclick="saveScreen(${screen.id})">저장</button>
+              </div>
+            </div>
+          `;
+          screenList.appendChild(screenCard);
+        });
+      } catch (error) {
+        console.error('화면 로드 오류:', error);
+        alert('화면 목록을 불러오는 중 오류가 발생했습니다.');
+      }
+    }
+
+    // 사용여부 업데이트
+    window.updateUseYn = async function(screenId, checked) {
+      try {
+        const useYn = checked ? 'Y' : 'N';
+        const { error } = await supabase
+          .from('screen_management')
+          .update({ use_yn: useYn })
+          .eq('id', screenId);
+
+        if (error) throw error;
+      } catch (error) {
+        console.error('사용여부 업데이트 오류:', error);
+        alert('사용여부 업데이트 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 순서 업데이트
+    window.updateOrder = async function(screenId, order) {
+      try {
+        const displayOrder = parseInt(order) || 0;
+        const { error } = await supabase
+          .from('screen_management')
+          .update({ display_order: displayOrder })
+          .eq('id', screenId);
+
+        if (error) throw error;
+      } catch (error) {
+        console.error('순서 업데이트 오류:', error);
+        alert('순서 업데이트 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 화면 저장
+    window.saveScreen = async function(screenId) {
+      try {
+        const useYn = document.getElementById(`use-${screenId}`).checked ? 'Y' : 'N';
+        const displayOrder = parseInt(document.getElementById(`order-${screenId}`).value) || 0;
+
+        const { error } = await supabase
+          .from('screen_management')
+          .update({ 
+            use_yn: useYn,
+            display_order: displayOrder
+          })
+          .eq('id', screenId);
+
+        if (error) throw error;
+
+        alert('저장되었습니다.');
+        await loadScreens();
+      } catch (error) {
+        console.error('저장 오류:', error);
+        alert('저장 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 초기 로드
+    loadScreens();
+  </script>
+</body>
+</html>
+

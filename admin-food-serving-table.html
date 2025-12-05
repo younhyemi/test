@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>서빙확인(테이블)</title>
+  <link rel="stylesheet" href="/styles/common.css">
+  <style>
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .refresh-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .refresh-btn:hover {
+      background: #e0e0e0;
+    }
+    
+    .back-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    
+    .table-list {
+      margin-bottom: 24px;
+    }
+    
+    .table-item {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .table-item:active {
+      transform: scale(0.98);
+    }
+    
+    .table-number {
+      font-size: 20px;
+      font-weight: 600;
+      color: #007bff;
+    }
+    
+    .order-details {
+      display: none;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #eee;
+    }
+    
+    .order-details.active {
+      display: block;
+    }
+    
+    .food-card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      position: relative;
+    }
+    
+    .food-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .food-menu-name {
+      font-size: 20px;
+      font-weight: bold;
+      color: #dc3545;
+    }
+    
+    .food-qty {
+      font-size: 20px;
+      font-weight: bold;
+      color: #dc3545;
+    }
+    
+    .food-pay-date {
+      font-size: 14px;
+      color: #666;
+      margin-top: 8px;
+    }
+    
+    .table-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .table-actions .btn {
+      flex: 1;
+    }
+    
+    .food-actions {
+      margin-top: 12px;
+    }
+    
+    .food-actions .btn {
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-left">
+        <button class="back-btn" onclick="window.location.href='admin.html'">←</button>
+        <h1 style="font-size: 24px; font-weight: bold;">서빙확인(테이블)</h1>
+      </div>
+      <button class="refresh-btn" onclick="location.reload()" title="새로고침">🔄</button>
+    </div>
+    
+    <div id="tableList" class="table-list">
+      <!-- 테이블 리스트가 여기에 동적으로 추가됩니다 -->
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/config/supabase.js';
+    import { formatDateTime } from '/utils/helpers.js';
+
+    // 주문이 있는 테이블 목록 로드
+    async function loadTables() {
+      try {
+        // 조건: (조리필요여부 == Y && 조리여부 == Y && 제공여부 == N) 또는 (조리필요여부 != Y && 결제여부 == Y)
+        const { data: orders, error } = await supabase
+          .from('order')
+          .select('table_no, cook_required_yn, ready_yn, serve_yn, pay_yn')
+          .eq('use_yn', 'Y');
+
+        if (error) throw error;
+
+        // 조건에 맞는 테이블 필터링
+        const filteredTables = orders.filter(order => {
+          return (order.cook_required_yn === 'Y' && order.ready_yn === 'Y' && order.serve_yn === 'N') ||
+                 (order.cook_required_yn !== 'Y' && order.pay_yn === 'Y');
+        });
+
+        // 중복 제거
+        const uniqueTables = [...new Set(filteredTables.map(item => item.table_no))].sort();
+
+        const tableList = document.getElementById('tableList');
+        tableList.innerHTML = '';
+
+        if (uniqueTables.length === 0) {
+          tableList.innerHTML = '<div class="text-center" style="padding: 24px; color: #999;">서빙할 테이블이 없습니다.</div>';
+          return;
+        }
+
+        for (const tableNo of uniqueTables) {
+          await renderTable(tableNo);
+        }
+      } catch (error) {
+        console.error('테이블 로드 오류:', error);
+        alert('테이블 목록을 불러오는 중 오류가 발생했습니다.');
+      }
+    }
+
+    // 테이블별 음식 리스트 렌더링
+    async function renderTable(tableNo) {
+      try {
+        // 조건: (조리필요여부 == Y && 조리여부 == Y && 제공여부 == N) 또는 (조리필요여부 != Y && 결제여부 == Y && 제공여부 == N)
+        const { data: rawData, error } = await supabase
+          .from('order')
+          .select('*')
+          .eq('table_no', tableNo)
+          .eq('use_yn', 'Y')
+          .eq('serve_yn', 'N');
+
+        if (error) throw error;
+
+        // 조건에 맞는 주문 필터링
+        const data = rawData.filter(order => {
+          return (order.cook_required_yn === 'Y' && order.ready_yn === 'Y' && order.serve_yn === 'N') ||
+                 (order.cook_required_yn !== 'Y' && order.pay_yn === 'Y' && order.serve_yn === 'N');
+        });
+
+        if (data.length === 0) return;
+
+        const tableList = document.getElementById('tableList');
+        const tableItem = document.createElement('div');
+        tableItem.className = 'table-item';
+        tableItem.id = `table-item-${tableNo}`;
+        
+        tableItem.innerHTML = `
+          <div class="table-number" onclick="toggleDetails('table-${tableNo}')">
+            테이블 ${tableNo} ▼
+          </div>
+          <div id="table-${tableNo}" class="order-details">
+            <div class="table-actions">
+              <button class="btn btn-success" onclick="serveAll('${tableNo}')">전체 제공완료</button>
+            </div>
+            ${data.map(order => `
+              <div class="food-card">
+                <div class="food-card-header">
+                  <div class="food-menu-name">${order.menu_name}</div>
+                  <div class="food-qty">수량: ${order.qty}</div>
+                </div>
+                <div class="food-pay-date">
+                  계산일시: ${order.pay_at ? formatDateTime(order.pay_at) : '-'}
+                </div>
+                <div class="food-actions">
+                  <button class="btn btn-success" onclick="serveOrder(${order.id}, '${tableNo}')">제공완료</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        tableList.appendChild(tableItem);
+      } catch (error) {
+        console.error('주문 로드 오류:', error);
+      }
+    }
+
+    // 상세 정보 토글
+    window.toggleDetails = function(tableId) {
+      const details = document.getElementById(tableId);
+      details.classList.toggle('active');
+      const header = details.previousElementSibling;
+      header.textContent = header.textContent.includes('▼') 
+        ? header.textContent.replace('▼', '▲')
+        : header.textContent.replace('▲', '▼');
+    };
+
+    // 행별 제공완료 처리
+    window.serveOrder = async function(orderId, tableNo) {
+      if (!confirm('이 주문을 제공완료 처리하시겠습니까?')) return;
+
+      try {
+        const { error } = await supabase
+          .from('order')
+          .update({ 
+            serve_yn: 'Y',
+            serve_at: new Date().toISOString()
+          })
+          .eq('id', orderId);
+
+        if (error) throw error;
+
+        alert('제공완료 처리되었습니다.');
+        await renderTable(tableNo);
+        await loadTables();
+      } catch (error) {
+        console.error('제공완료 처리 오류:', error);
+        alert('제공완료 처리 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 전체 제공완료 처리
+    window.serveAll = async function(tableNo) {
+      if (!confirm(`테이블 ${tableNo}의 모든 주문을 제공완료 처리하시겠습니까?`)) return;
+
+      try {
+        // 조건에 맞는 주문만 업데이트
+        const { data: orders, error: fetchError } = await supabase
+          .from('order')
+          .select('*')
+          .eq('table_no', tableNo)
+          .eq('use_yn', 'Y')
+          .eq('serve_yn', 'N');
+
+        if (fetchError) throw fetchError;
+
+        const filteredOrders = orders.filter(order => {
+          return (order.cook_required_yn === 'Y' && order.ready_yn === 'Y' && order.serve_yn === 'N') ||
+                 (order.cook_required_yn !== 'Y' && order.pay_yn === 'Y' && order.serve_yn === 'N');
+        });
+
+        const orderIds = filteredOrders.map(o => o.id);
+
+        if (orderIds.length === 0) {
+          alert('제공할 주문이 없습니다.');
+          return;
+        }
+
+        const { error } = await supabase
+          .from('order')
+          .update({ 
+            serve_yn: 'Y',
+            serve_at: new Date().toISOString()
+          })
+          .in('id', orderIds);
+
+        if (error) throw error;
+
+        alert('제공완료 처리되었습니다.');
+        location.reload();
+      } catch (error) {
+        console.error('제공완료 처리 오류:', error);
+        alert('제공완료 처리 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 초기 로드
+    loadTables();
+  </script>
+</body>
+</html>
+
