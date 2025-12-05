@@ -296,11 +296,36 @@
 
     // 메뉴 선택
     window.selectMenu = async function(menuName, autoExpand = false) {
-      selectedMenu = menuName;
-      
       // 메뉴 그룹에서 해당 메뉴 찾기
       const menuGroup = window.menuGroups?.find(mg => mg.menu_name === menuName);
       if (!menuGroup) return;
+
+      // 해당 메뉴의 주문 리스트 찾기
+      const menuItem = Array.from(document.querySelectorAll('.menu-name')).find(
+        el => el.textContent.includes(menuName)
+      );
+      if (!menuItem) return;
+
+      const orderList = menuItem.nextElementSibling;
+      const isActive = orderList.classList.contains('active');
+
+      // 자동 확장이 아닌 경우 토글 처리
+      if (!autoExpand) {
+        // 모든 주문 리스트 닫기
+        document.querySelectorAll('.order-list').forEach(list => {
+          list.classList.remove('active');
+        });
+        
+        // 모든 메뉴 이름의 화살표를 ▼로 변경
+        document.querySelectorAll('.menu-name').forEach(name => {
+          name.textContent = name.textContent.replace('▲', '▼');
+        });
+
+        // 이미 열려있던 메뉴를 다시 클릭한 경우 닫기만 하고 종료
+        if (isActive) {
+          return;
+        }
+      }
 
       // 결제일시 오름차순 정렬
       menuGroup.orders.sort((a, b) => {
@@ -310,46 +335,35 @@
       });
 
       orders = menuGroup.orders;
-
-      // 모든 주문 리스트 닫기 (자동 확장이 아닌 경우에만)
-      if (!autoExpand) {
-        document.querySelectorAll('.order-list').forEach(list => {
-          list.classList.remove('active');
-        });
-      }
+      selectedMenu = menuName;
 
       // 해당 메뉴의 주문 리스트 표시
-      const menuItem = Array.from(document.querySelectorAll('.menu-name')).find(
-        el => el.textContent.includes(menuName)
-      );
-      if (menuItem) {
-        const orderList = menuItem.nextElementSibling;
-        orderList.classList.add('active');
-        
-        if (menuGroup.orders.length === 0) {
-          orderList.innerHTML = '<div class="text-center" style="padding: 16px; color: #999;">주문이 없습니다.</div>';
-          return;
-        }
-
-        orderList.innerHTML = menuGroup.orders.map(order => `
-          <div class="order-card">
-            <div class="order-header">
-              <div class="order-table">테이블 ${order.table_no}</div>
-              <div class="order-qty">수량: ${order.qty}</div>
-            </div>
-            <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
-              결제일시: ${order.pay_at ? formatDateTime(order.pay_at) : '-'}
-            </div>
-            <div style="font-size: 14px; margin-bottom: 8px;">
-              <span style="font-weight: bold; ${order.ready_yn === 'Y' ? 'color: #007bff;' : 'color: #dc3545;'}">조리여부: ${order.ready_yn === 'Y' ? '완료' : '미완료'}</span>
-            </div>
-            <div style="display: flex; gap: 8px;">
-              <button class="btn btn-success" style="flex: 1;" onclick="readyOrder(${order.id})">조리완료</button>
-              <button class="btn btn-warning" style="flex: 1;" onclick="cancelReadyOrder(${order.id})">조리취소</button>
-            </div>
-          </div>
-        `).join('');
+      orderList.classList.add('active');
+      menuItem.textContent = menuItem.textContent.replace('▼', '▲');
+      
+      if (menuGroup.orders.length === 0) {
+        orderList.innerHTML = '<div class="text-center" style="padding: 16px; color: #999;">주문이 없습니다.</div>';
+        return;
       }
+
+      orderList.innerHTML = menuGroup.orders.map(order => `
+        <div class="order-card">
+          <div class="order-header">
+            <div class="order-table">테이블 ${order.table_no}</div>
+            <div class="order-qty">수량: ${order.qty}</div>
+          </div>
+          <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
+            결제일시: ${order.pay_at ? formatDateTime(order.pay_at) : '-'}
+          </div>
+          <div style="font-size: 14px; margin-bottom: 8px;">
+            <span style="font-weight: bold; ${order.ready_yn === 'Y' ? 'color: #007bff;' : 'color: #dc3545;'}">조리여부: ${order.ready_yn === 'Y' ? '완료' : '미완료'}</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-success" style="flex: 1;" onclick="readyOrder(${order.id})">조리완료</button>
+            <button class="btn btn-warning" style="flex: 1;" onclick="cancelReadyOrder(${order.id})">조리취소</button>
+          </div>
+        </div>
+      `).join('');
     };
 
     // 필터링 함수
