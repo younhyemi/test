@@ -177,10 +177,12 @@
           quantities[menu.id] = 0;
           const menuCard = document.createElement('div');
           menuCard.className = 'menu-card';
+          const menuDetail = menu.menu_detail || '';
           menuCard.innerHTML = `
             <div class="menu-header">
               <div>
                 <div class="menu-name">${menu.menu_name}</div>
+                ${menuDetail ? `<div style="font-size: 12px; color: #666; margin-top: 4px;">${menuDetail}</div>` : ''}
               </div>
               <div class="menu-price">${formatPrice(menu.price)}</div>
             </div>

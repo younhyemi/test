@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>대시보드</title>
+  <link rel="stylesheet" href="/styles/common.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background: #f5f5f5;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 24px;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      margin-bottom: 0;
+    }
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .refresh-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    
+    .refresh-btn:hover {
+      background: #e0e0e0;
+    }
+    
+    .back-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .back-btn:hover {
+      background: #e0e0e0;
+    }
+
+    .dashboard-container {
+      display: flex;
+      height: calc(100vh - 80px);
+      gap: 16px;
+      padding: 16px;
+    }
+
+    .dashboard-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .preparing-section {
+      background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+      border: 2px solid #ffc107;
+    }
+
+    .ready-section {
+      background: linear-gradient(135deg, #e6f7e6 0%, #d4edda 100%);
+      border: 2px solid #28a745;
+    }
+
+    .section-title {
+      font-size: 36px;
+      font-weight: bold;
+      margin-bottom: 24px;
+      text-align: center;
+      color: #333;
+    }
+
+    .preparing-section .section-title {
+      color: #856404;
+    }
+
+    .ready-section .section-title {
+      color: #155724;
+    }
+
+    .order-list-container {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .order-list-container::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .order-list-container::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 4px;
+    }
+
+    .order-list-container::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+    }
+
+    .order-list-container::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .order-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .order-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+
+    .order-menu-name {
+      font-size: 24px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 16px;
+    }
+
+    .order-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 18px;
+    }
+
+    .order-table {
+      font-weight: 600;
+      color: #007bff;
+    }
+
+    .order-qty {
+      font-weight: 600;
+      color: #666;
+    }
+
+    .ready-order-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .ready-order-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .ready-order-content {
+      flex: 1;
+    }
+
+    .check-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #28a745;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      color: white;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.2s, background 0.2s;
+      flex-shrink: 0;
+      margin-left: 16px;
+    }
+
+    .check-icon:hover {
+      transform: scale(1.1);
+      background: #218838;
+    }
+
+    .check-icon:active {
+      transform: scale(0.95);
+    }
+
+    .empty-message {
+      text-align: center;
+      padding: 48px 24px;
+      color: #999;
+      font-size: 18px;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-container {
+        flex-direction: column;
+        height: auto;
+        min-height: calc(100vh - 80px);
+      }
+
+      .dashboard-section {
+        min-height: 400px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-left">
+        <button class="back-btn" onclick="window.location.href='admin.html'">←</button>
+        <h1 style="font-size: 24px; font-weight: bold; margin: 0;">대시보드</h1>
+      </div>
+      <button class="refresh-btn" onclick="refreshData()" title="새로고침">🔄</button>
+    </div>
+    
+    <div class="dashboard-container">
+      <!-- 준비중 섹션 -->
+      <div class="dashboard-section preparing-section">
+        <div class="section-title">준비중</div>
+        <div id="preparingList" class="order-list-container">
+          <!-- 준비중 주문 리스트가 여기에 동적으로 추가됩니다 -->
+        </div>
+      </div>
+
+      <!-- 준비완료 섹션 -->
+      <div class="dashboard-section ready-section">
+        <div class="section-title">준비완료</div>
+        <div id="readyList" class="order-list-container">
+          <!-- 준비완료 주문 리스트가 여기에 동적으로 추가됩니다 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/config/supabase.js';
+
+    let autoRefreshInterval = null;
+
+    // 준비중 주문 로드
+    async function loadPreparingOrders() {
+      try {
+        const { data, error } = await supabase
+          .from('order')
+          .select('*')
+          .eq('cook_required_yn', 'Y')
+          .eq('pay_yn', 'Y')
+          .eq('ready_yn', 'N')
+          .eq('serve_yn', 'N')
+          .eq('use_yn', 'Y')
+          .order('pay_at', { ascending: true });
+
+        if (error) throw error;
+
+        const preparingList = document.getElementById('preparingList');
+        preparingList.innerHTML = '';
+
+        if (data.length === 0) {
+          preparingList.innerHTML = '<div class="empty-message">준비중인 주문이 없습니다.</div>';
+          return;
+        }
+
+        data.forEach(order => {
+          const orderCard = document.createElement('div');
+          orderCard.className = 'order-card';
+          orderCard.innerHTML = `
+            <div class="order-menu-name">${order.menu_name}</div>
+            <div class="order-footer">
+              <div class="order-table">테이블 ${order.table_no}</div>
+              <div class="order-qty">수량: ${order.qty}</div>
+            </div>
+          `;
+          preparingList.appendChild(orderCard);
+        });
+      } catch (error) {
+        console.error('준비중 주문 로드 오류:', error);
+      }
+    }
+
+    // 준비완료 주문 로드
+    async function loadReadyOrders() {
+      try {
+        // 먼저 모든 계산완료이고 제공되지 않은 주문 조회
+        const { data: rawData, error } = await supabase
+          .from('order')
+          .select('*')
+          .eq('pay_yn', 'Y')
+          .eq('serve_yn', 'N')
+          .eq('use_yn', 'Y');
+
+        if (error) throw error;
+
+        // 필터링: (조리필요여부=='Y' && 조리완료=='Y')이거나 (조리필요여부!='Y')
+        const filteredData = rawData.filter(order => {
+          return (order.cook_required_yn === 'Y' && order.ready_yn === 'Y') || 
+                 (order.cook_required_yn !== 'Y');
+        });
+
+        // 정렬: ready_at 순서대로 (조리필요한 경우 ready_at 사용, 조리불필요한 경우 order_at 사용)
+        const data = [...filteredData].sort((a, b) => {
+          // 조리필요한 경우: ready_at (조리완료일시)
+          // 조리불필요한 경우: order_at (주문등록일시)
+          let dateA, dateB;
+          
+          if (a.cook_required_yn === 'Y' && a.ready_yn === 'Y') {
+            // 조리완료일시 사용 (ready_at)
+            dateA = new Date(a.ready_at || a.order_at || a.created_at);
+          } else {
+            // 조리불필요한 경우 주문등록일시 사용
+            dateA = new Date(a.order_at || a.created_at);
+          }
+          
+          if (b.cook_required_yn === 'Y' && b.ready_yn === 'Y') {
+            // 조리완료일시 사용 (ready_at)
+            dateB = new Date(b.ready_at || b.order_at || b.created_at);
+          } else {
+            // 조리불필요한 경우 주문등록일시 사용
+            dateB = new Date(b.order_at || b.created_at);
+          }
+          
+          // ready_at 오름차순 정렬 (가장 오래된 것부터)
+          const dateCompare = dateA - dateB;
+          if (dateCompare !== 0) return dateCompare;
+          
+          // ready_at이 같으면 메뉴명으로 정렬
+          const menuCompare = a.menu_name.localeCompare(b.menu_name);
+          if (menuCompare !== 0) return menuCompare;
+          
+          // 메뉴명도 같으면 테이블번호로 정렬
+          return a.table_no.localeCompare(b.table_no);
+        });
+
+        const readyList = document.getElementById('readyList');
+        readyList.innerHTML = '';
+
+        if (data.length === 0) {
+          readyList.innerHTML = '<div class="empty-message">준비완료된 주문이 없습니다.</div>';
+          return;
+        }
+
+        data.forEach(order => {
+          const orderCard = document.createElement('div');
+          orderCard.className = 'ready-order-card';
+          orderCard.dataset.orderId = order.id;
+          
+          orderCard.innerHTML = `
+            <div class="ready-order-content">
+              <div class="order-menu-name">${order.menu_name}</div>
+              <div class="order-footer">
+                <div class="order-table">테이블 ${order.table_no}</div>
+                <div class="order-qty">수량: ${order.qty}</div>
+              </div>
+            </div>
+            <div class="check-icon" onclick="serveOrder(${order.id}, event)">✓</div>
+          `;
+          
+          readyList.appendChild(orderCard);
+        });
+      } catch (error) {
+        console.error('준비완료 주문 로드 오류:', error);
+      }
+    }
+
+
+    // 제공완료 처리
+    window.serveOrder = async function(orderId, event) {
+      if (event) {
+        event.stopPropagation();
+      }
+
+      if (!confirm('이 주문을 제공완료 처리하시겠습니까?')) return;
+
+      try {
+        const { error } = await supabase
+          .from('order')
+          .update({ 
+            serve_yn: 'Y',
+            serve_at: new Date().toISOString()
+          })
+          .eq('id', orderId);
+
+        if (error) throw error;
+
+        alert('제공완료 처리되었습니다.');
+        await refreshData();
+      } catch (error) {
+        console.error('제공완료 처리 오류:', error);
+        alert('제공완료 처리 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 데이터 새로고침
+    window.refreshData = async function() {
+      await Promise.all([loadPreparingOrders(), loadReadyOrders()]);
+    };
+
+    // 자동 새로고침 시작
+    function startAutoRefresh() {
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+      }
+      autoRefreshInterval = setInterval(() => {
+        refreshData();
+      }, 5000); // 5초마다
+    }
+
+    // 초기 로드
+    loadPreparingOrders();
+    loadReadyOrders();
+    startAutoRefresh();
+
+    // 페이지 언로드 시 인터벌 정리
+    window.addEventListener('beforeunload', () => {
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+      }
+    });
+  </script>
+</body>
+</html>
+

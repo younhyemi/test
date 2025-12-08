@@ -180,6 +180,11 @@
       </div>
       
       <div class="form-group">
+        <label class="form-label" for="menuDetail">메뉴상세</label>
+        <textarea id="menuDetail" class="input" placeholder="메뉴상세를 입력하세요" rows="3" style="resize: vertical; min-height: 80px;"></textarea>
+      </div>
+      
+      <div class="form-group">
         <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
           <input type="checkbox" id="cookRequired" checked style="width: 20px; height: 20px;">
           조리필요여부
@@ -222,11 +227,14 @@
         data.forEach(menu => {
           const menuCard = document.createElement('div');
           menuCard.className = 'menu-card';
+          const menuDetail = menu.menu_detail || '';
+          const escapedMenuDetail = menuDetail.replace(/'/g, "\\'").replace(/\n/g, '\\n');
           menuCard.innerHTML = `
             <div class="menu-card-header">
               <div>
                 <div class="menu-category">${menu.category || ''}</div>
                 <div class="menu-name">${menu.menu_name}</div>
+                ${menuDetail ? `<div style="font-size: 12px; color: #666; margin-top: 4px;">${menuDetail}</div>` : ''}
               </div>
               <div class="menu-price">${formatPrice(menu.price)}</div>
             </div>
@@ -239,7 +247,7 @@
               </div>
             </div>
             <div class="menu-actions">
-              <button class="btn btn-secondary" onclick="editMenu(${menu.id}, '${(menu.category || '').replace(/'/g, "\\'")}', '${menu.menu_name.replace(/'/g, "\\'")}', ${menu.price}, '${menu.cook_required_yn || 'Y'}')">수정</button>
+              <button class="btn btn-secondary" onclick="editMenu(${menu.id}, '${(menu.category || '').replace(/'/g, "\\'")}', '${menu.menu_name.replace(/'/g, "\\'")}', ${menu.price}, '${escapedMenuDetail}', '${menu.cook_required_yn || 'Y'}')">수정</button>
               <button class="btn btn-warning" onclick="toggleSale(${menu.id}, '${menu.sale_yn}')">
                 ${menu.sale_yn === 'Y' ? '마감' : '판매재개'}
               </button>
@@ -259,6 +267,7 @@
       const category = document.getElementById('category').value.trim();
       const menuName = document.getElementById('menuName').value.trim();
       const menuPrice = parseInt(document.getElementById('menuPrice').value);
+      const menuDetail = document.getElementById('menuDetail').value.trim();
       const cookRequired = document.getElementById('cookRequired').checked ? 'Y' : 'N';
 
       if (!category) {
@@ -285,6 +294,7 @@
               category: category,
               menu_name: menuName,
               price: menuPrice,
+              menu_detail: menuDetail || null,
               cook_required_yn: cookRequired
             })
             .eq('id', editingMenuId);
@@ -298,6 +308,7 @@
               category: category,
               menu_name: menuName,
               price: menuPrice,
+              menu_detail: menuDetail || null,
               sale_yn: 'Y',
               cook_required_yn: cookRequired
             });
@@ -309,6 +320,7 @@
         document.getElementById('category').value = '';
         document.getElementById('menuName').value = '';
         document.getElementById('menuPrice').value = '';
+        document.getElementById('menuDetail').value = '';
         document.getElementById('cookRequired').checked = true;
         editingMenuId = null;
         document.getElementById('saveBtn').textContent = '저장';
@@ -322,11 +334,12 @@
     });
 
     // 메뉴 수정
-    window.editMenu = function(id, category, name, price, cookRequiredYn) {
+    window.editMenu = function(id, category, name, price, menuDetail, cookRequiredYn) {
       editingMenuId = id;
       document.getElementById('category').value = category;
       document.getElementById('menuName').value = name;
       document.getElementById('menuPrice').value = price;
+      document.getElementById('menuDetail').value = menuDetail || '';
       document.getElementById('cookRequired').checked = (cookRequiredYn === 'Y' || cookRequiredYn === undefined);
       document.getElementById('saveBtn').textContent = '수정';
       document.getElementById('category').focus();

@@ -60,6 +60,17 @@ ADD COLUMN IF NOT EXISTS cook_required_yn CHAR(1) DEFAULT 'Y' CHECK (cook_requir
 -- ORDER 테이블의 cook_required_yn 컬럼에 인덱스 추가
 CREATE INDEX IF NOT EXISTS idx_order_cook_required_yn ON "order"(cook_required_yn);
 
+-- ORDER 테이블에 조리완료일시 컬럼 추가
+ALTER TABLE "order" 
+ADD COLUMN IF NOT EXISTS ready_at TIMESTAMP WITH TIME ZONE NULL;
+
+-- ORDER 테이블의 ready_at 컬럼에 인덱스 추가
+CREATE INDEX IF NOT EXISTS idx_order_ready_at ON "order"(ready_at);
+
+-- MENU 테이블에 menu_detail 컬럼 추가
+ALTER TABLE menu 
+ADD COLUMN IF NOT EXISTS menu_detail TEXT;
+
 -- 화면관리 테이블 생성
 CREATE TABLE IF NOT EXISTS screen_management (
   id BIGSERIAL PRIMARY KEY,
@@ -74,6 +85,7 @@ CREATE TABLE IF NOT EXISTS screen_management (
 -- 화면관리 테이블 초기 데이터 삽입
 INSERT INTO screen_management (screen_key, screen_name, use_yn, display_order) 
 VALUES 
+  ('dashboard', '대시보드', 'Y', 0),
   ('menu', '메뉴관리', 'Y', 1),
   ('orders', '테이블별 주문확인', 'Y', 2),
   ('food-kitchen', '음식확인(주방)', 'Y', 3),

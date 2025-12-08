@@ -47,51 +47,27 @@
       cursor: pointer;
     }
     
-    .menu-list {
+    .order-list {
       margin-bottom: 24px;
     }
     
-    .menu-item {
+    .order-card {
       background: white;
       border-radius: 12px;
       padding: 20px;
-      margin-bottom: 12px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    
-    .menu-item:active {
-      transform: scale(0.98);
-    }
-    
-    .menu-name {
-      font-size: 18px;
-      font-weight: 600;
-      color: #333;
-    }
-    
-    .order-list {
-      display: none;
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1px solid #eee;
-    }
-    
-    .order-list.active {
-      display: block;
-    }
-    
-    .table-card {
-      background: white;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       position: relative;
     }
     
-    .table-card-header {
+    .order-menu-name {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 12px;
+    }
+    
+    .order-card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -99,38 +75,28 @@
     }
     
     .table-name {
-      font-size: 24px;
+      font-size: 28px;
       font-weight: bold;
       color: #007bff;
     }
     
-    .table-qty {
-      font-size: 24px;
+    .order-qty {
+      font-size: 28px;
       font-weight: bold;
       color: #dc3545;
     }
     
-    .table-serve-date {
+    .order-serve-date {
       font-size: 14px;
       color: #666;
-      margin-top: 8px;
+      margin-bottom: 12px;
     }
     
-    .table-actions {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-    
-    .table-actions .btn {
-      flex: 1;
-    }
-    
-    .table-card-actions {
+    .order-card-actions {
       margin-top: 12px;
     }
     
-    .table-card-actions .btn {
+    .order-card-actions .btn {
       width: 100%;
     }
   </style>
@@ -145,8 +111,8 @@
       <button class="refresh-btn" onclick="location.reload()" title="새로고침">🔄</button>
     </div>
     
-    <div id="menuList" class="menu-list">
-      <!-- 메뉴 리스트가 여기에 동적으로 추가됩니다 -->
+    <div id="orderList" class="order-list">
+      <!-- 주문 리스트가 여기에 동적으로 추가됩니다 -->
     </div>
   </div>
 
@@ -154,146 +120,53 @@
     import { supabase } from '/config/supabase.js';
     import { formatDateTime } from '/utils/helpers.js';
 
-    let selectedMenu = null;
-    let orders = [];
-
-    // 메뉴 목록 로드 (제공완료된 항목)
-    async function loadMenus() {
+    // 제공완료된 주문 목록 로드
+    async function loadOrders() {
       try {
-        // 제공완료된 주문 조회
-        const { data: orders, error: orderError } = await supabase
+        // 제공완료된 주문 조회 (최근 제공일시 순으로 정렬)
+        const { data, error } = await supabase
           .from('order')
           .select('*')
           .eq('serve_yn', 'Y')
           .eq('use_yn', 'Y')
           .order('serve_at', { ascending: false });
 
-        if (orderError) throw orderError;
+        if (error) throw error;
 
-        // 메뉴명 기준으로 그룹핑하여 총 수량 계산
-        const menuGroups = {};
-        orders.forEach(order => {
-          if (!menuGroups[order.menu_name]) {
-            menuGroups[order.menu_name] = {
-              menu_name: order.menu_name,
-              total_qty: 0,
-              orders: []
-            };
-          }
-          menuGroups[order.menu_name].total_qty += order.qty;
-          menuGroups[order.menu_name].orders.push(order);
-        });
+        const orderList = document.getElementById('orderList');
+        orderList.innerHTML = '';
 
-        const menuList = document.getElementById('menuList');
-        menuList.innerHTML = '';
-
-        if (Object.keys(menuGroups).length === 0) {
-          menuList.innerHTML = '<div class="text-center" style="padding: 24px; color: #999;">제공된 음식이 없습니다.</div>';
+        if (data.length === 0) {
+          orderList.innerHTML = '<div class="text-center" style="padding: 24px; color: #999;">제공된 주문이 없습니다.</div>';
           return;
         }
 
-        // 메뉴명 순으로 정렬
-        const sortedMenus = Object.values(menuGroups).sort((a, b) => 
-          a.menu_name.localeCompare(b.menu_name)
-        );
-
-        sortedMenus.forEach((menuGroup, index) => {
-          const menuItem = document.createElement('div');
-          menuItem.className = 'menu-item';
-          menuItem.innerHTML = `
-            <div class="menu-name" onclick="selectMenu('${menuGroup.menu_name.replace(/'/g, "\\'")}')">
-              ${menuGroup.menu_name} (총 ${menuGroup.total_qty}개) ▼
+        data.forEach(order => {
+          const orderCard = document.createElement('div');
+          orderCard.className = 'order-card';
+          orderCard.innerHTML = `
+            <div class="order-menu-name">${order.menu_name}</div>
+            <div class="order-card-header">
+              <div class="table-name">테이블 ${order.table_no}</div>
+              <div class="order-qty">수량: ${order.qty}</div>
             </div>
-            <div id="orders-${index}" class="order-list"></div>
+            <div class="order-serve-date">
+              제공일시: ${order.serve_at ? formatDateTime(order.serve_at) : '-'}
+            </div>
+            <div class="order-card-actions">
+              <button class="btn btn-danger" onclick="cancelServeOrder(${order.id})">제공취소</button>
+            </div>
           `;
-          menuList.appendChild(menuItem);
+          orderList.appendChild(orderCard);
         });
-
-        // 메뉴 그룹 정보 저장
-        window.menuGroups = sortedMenus;
       } catch (error) {
-        console.error('메뉴 로드 오류:', error);
-        alert('메뉴를 불러오는 중 오류가 발생했습니다.');
+        console.error('주문 로드 오류:', error);
+        alert('주문을 불러오는 중 오류가 발생했습니다.');
       }
     }
 
-    // 메뉴 선택
-    window.selectMenu = async function(menuName) {
-      // 메뉴 그룹에서 해당 메뉴 찾기
-      const menuGroup = window.menuGroups?.find(mg => mg.menu_name === menuName);
-      if (!menuGroup) return;
-
-      // 해당 메뉴의 주문 리스트 찾기
-      const menuItem = Array.from(document.querySelectorAll('.menu-name')).find(
-        el => el.textContent.includes(menuName)
-      );
-      if (!menuItem) return;
-
-      const orderList = menuItem.nextElementSibling;
-      const isActive = orderList.classList.contains('active');
-
-      // 모든 주문 리스트 닫기
-      document.querySelectorAll('.order-list').forEach(list => {
-        list.classList.remove('active');
-      });
-      
-      // 모든 메뉴 이름의 화살표를 ▼로 변경
-      document.querySelectorAll('.menu-name').forEach(name => {
-        name.textContent = name.textContent.replace('▲', '▼');
-      });
-
-      // 이미 열려있던 메뉴를 다시 클릭한 경우 닫기만 하고 종료
-      if (isActive) {
-        return;
-      }
-
-      // 정렬: 제공일시 내림차순 (최근 제공일시), 그 다음 테이블명 오름차순
-      menuGroup.orders.sort((a, b) => {
-        // 먼저 제공일시로 정렬 (내림차순 - 최근 제공일시가 먼저)
-        const dateA = new Date(a.serve_at || a.created_at);
-        const dateB = new Date(b.serve_at || b.created_at);
-        const dateCompare = dateB - dateA; // 내림차순
-        if (dateCompare !== 0) return dateCompare;
-        
-        // 제공일시가 같으면 테이블명으로 정렬 (오름차순)
-        return a.table_no.localeCompare(b.table_no);
-      });
-
-      orders = menuGroup.orders;
-      selectedMenu = menuName;
-
-      // 해당 메뉴의 주문 리스트 표시
-      orderList.classList.add('active');
-      menuItem.textContent = menuItem.textContent.replace('▼', '▲');
-      
-      if (menuGroup.orders.length === 0) {
-        orderList.innerHTML = '<div class="text-center" style="padding: 16px; color: #999;">주문이 없습니다.</div>';
-        return;
-      }
-
-      orderList.innerHTML = `
-        <div class="table-actions">
-          <button class="btn btn-danger" onclick="cancelServeAll('${menuName.replace(/'/g, "\\'")}')">전체 제공취소</button>
-        </div>
-        ${menuGroup.orders.map(order => `
-          <div class="table-card">
-            <div class="table-card-header">
-              <div class="table-name">테이블 ${order.table_no}</div>
-              <div class="table-qty">${order.qty}</div>
-            </div>
-            <div class="table-serve-date">
-              제공일시: ${order.serve_at ? formatDateTime(order.serve_at) : '-'}
-            </div>
-            <div class="table-card-actions">
-              <button class="btn btn-danger" onclick="cancelServeOrder(${order.id}, '${menuName.replace(/'/g, "\\'")}')">제공취소</button>
-            </div>
-          </div>
-        `).join('')}
-      `;
-    };
-
-    // 행별 제공취소 처리
-    window.cancelServeOrder = async function(orderId, menuName) {
+    // 제공취소 처리
+    window.cancelServeOrder = async function(orderId) {
       if (!confirm('이 주문의 제공을 취소하시겠습니까?')) return;
 
       try {
@@ -308,39 +181,7 @@
         if (error) throw error;
 
         alert('제공취소 처리되었습니다.');
-        await loadMenus();
-        // 메뉴가 열려있으면 다시 선택하여 업데이트
-        if (selectedMenu === menuName) {
-          setTimeout(() => {
-            selectMenu(menuName);
-          }, 100);
-        }
-      } catch (error) {
-        console.error('제공취소 처리 오류:', error);
-        alert('제공취소 처리 중 오류가 발생했습니다.');
-      }
-    };
-
-    // 전체 제공취소 처리
-    window.cancelServeAll = async function(menuName) {
-      if (!confirm(`${menuName}의 모든 제공 내역을 취소하시겠습니까?`)) return;
-
-      try {
-        // 해당 메뉴의 제공완료된 주문만 업데이트
-        const { error } = await supabase
-          .from('order')
-          .update({ 
-            serve_yn: 'N',
-            serve_at: null
-          })
-          .eq('menu_name', menuName)
-          .eq('serve_yn', 'Y')
-          .eq('use_yn', 'Y');
-
-        if (error) throw error;
-
-        alert('제공취소 처리되었습니다.');
-        await loadMenus();
+        await loadOrders();
       } catch (error) {
         console.error('제공취소 처리 오류:', error);
         alert('제공취소 처리 중 오류가 발생했습니다.');
@@ -348,8 +189,9 @@
     };
 
     // 초기 로드
-    loadMenus();
+    loadOrders();
   </script>
 </body>
 </html>
+
 

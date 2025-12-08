@@ -78,6 +78,7 @@
 
         // 사용여부가 Y인 화면만 표시
         const screenMap = {
+          'dashboard': { icon: '📊', title: '대시보드' },
           'menu': { icon: '📋', title: '메뉴관리' },
           'orders': { icon: '🍳', title: '테이블별 주문확인' },
           'food-kitchen': { icon: '🍽️', title: '음식확인(주방)' },
@@ -124,6 +125,7 @@
         console.error('메뉴 로드 오류:', error);
         // 오류 발생 시 기본 메뉴 표시
         const defaultScreens = [
+          { key: 'dashboard', icon: '📊', title: '대시보드' },
           { key: 'menu', icon: '📋', title: '메뉴관리' },
           { key: 'orders', icon: '🍳', title: '테이블별 주문확인' },
           { key: 'food-kitchen', icon: '🍽️', title: '음식확인(주방)' },

@@ -113,18 +113,77 @@
       padding: 16px;
       margin-bottom: 24px;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .filter-header {
       display: flex;
       gap: 12px;
       align-items: center;
+      margin-bottom: 12px;
     }
     
-    .filter-select {
-      flex: 1;
-      padding: 12px;
+    .filter-toggle-btn {
+      padding: 8px 16px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    
+    .filter-toggle-btn:hover {
+      background: #218838;
+    }
+    
+    .filter-toggle-btn.close {
+      background: #dc3545;
+    }
+    
+    .filter-toggle-btn.close:hover {
+      background: #c82333;
+    }
+    
+    .filter-checkbox-list {
+      max-height: 200px;
+      overflow-y: auto;
       border: 1px solid #ddd;
       border-radius: 8px;
+      padding: 12px;
+      background: #f8f9fa;
+      display: none;
+    }
+    
+    .filter-checkbox-list.show {
+      display: block;
+    }
+    
+    .filter-checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    
+    .filter-checkbox-item:hover {
+      background: #e9ecef;
+    }
+    
+    .filter-checkbox-item input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+    
+    .filter-checkbox-item label {
       font-size: 16px;
-      background: white;
+      cursor: pointer;
+      flex: 1;
+      user-select: none;
     }
     
     .search-btn {
@@ -139,10 +198,25 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
     }
     
     .search-btn:hover {
       background: #0056b3;
+    }
+    
+    .select-all-btn {
+      padding: 8px 16px;
+      background: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    
+    .select-all-btn:hover {
+      background: #5a6268;
     }
     
   </style>
@@ -154,14 +228,18 @@
         <button class="back-btn" onclick="window.location.href='admin.html'">←</button>
         <h1 style="font-size: 24px; font-weight: bold;">음식확인(주방)</h1>
       </div>
-      <button class="refresh-btn" onclick="location.reload()" title="새로고침">🔄</button>
+      <button class="refresh-btn" onclick="refreshData()" title="새로고침">🔄</button>
     </div>
     
     <div class="filter-section">
-      <select id="menuFilter" class="filter-select">
-        <option value="">전체</option>
-      </select>
-      <button class="search-btn" onclick="filterMenus()" title="검색">🔍</button>
+      <div class="filter-header">
+        <button id="filterToggleBtn" class="filter-toggle-btn" onclick="toggleFilterList()">필터 열기</button>
+        <button class="select-all-btn" onclick="toggleSelectAll()">전체 선택/해제</button>
+        <button class="search-btn" onclick="filterMenus()" title="검색">🔍</button>
+      </div>
+      <div id="menuFilterList" class="filter-checkbox-list">
+        <!-- 체크박스 리스트가 여기에 동적으로 추가됩니다 -->
+      </div>
     </div>
     
     <div id="menuList" class="menu-list">
@@ -177,6 +255,9 @@
     let orders = [];
     let allMenuNames = [];
     let autoExpandMenu = null; // 자동으로 열어야 할 메뉴명
+    let selectedMenuNames = []; // 선택된 메뉴명 배열
+    let autoRefreshInterval = null; // 자동 새로고침 인터벌
+    let closedMenus = new Set(); // 사용자가 닫은 메뉴들
 
     // 조리필요여부가 Y인 메뉴 리스트 가져오기
     async function loadMenuNames() {
@@ -191,22 +272,64 @@
 
         allMenuNames = menuData.map(m => m.menu_name);
         
-        // 콤보박스에 메뉴 추가
-        const menuFilter = document.getElementById('menuFilter');
-        menuFilter.innerHTML = '<option value="">전체</option>';
+        // 체크박스 리스트에 메뉴 추가
+        const menuFilterList = document.getElementById('menuFilterList');
+        menuFilterList.innerHTML = '';
+        
         allMenuNames.forEach(menuName => {
-          const option = document.createElement('option');
-          option.value = menuName;
-          option.textContent = menuName;
-          menuFilter.appendChild(option);
+          const checkboxItem = document.createElement('div');
+          checkboxItem.className = 'filter-checkbox-item';
+          const checkboxId = `menu-checkbox-${menuName.replace(/\s/g, '-')}`;
+          checkboxItem.innerHTML = `
+            <input type="checkbox" id="${checkboxId}" value="${menuName}" onchange="updateSelectedMenus()">
+            <label for="${checkboxId}">${menuName}</label>
+          `;
+          menuFilterList.appendChild(checkboxItem);
         });
       } catch (error) {
         console.error('메뉴명 로드 오류:', error);
       }
     }
+    
+    // 필터 리스트 열기/닫기
+    window.toggleFilterList = function() {
+      const filterList = document.getElementById('menuFilterList');
+      const toggleBtn = document.getElementById('filterToggleBtn');
+      const isVisible = filterList.classList.contains('show');
+      
+      if (isVisible) {
+        filterList.classList.remove('show');
+        toggleBtn.textContent = '필터 열기';
+        toggleBtn.classList.remove('close');
+      } else {
+        filterList.classList.add('show');
+        toggleBtn.textContent = '필터 닫기';
+        toggleBtn.classList.add('close');
+      }
+    };
+    
+    // 선택된 메뉴 업데이트
+    window.updateSelectedMenus = function() {
+      const checkboxes = document.querySelectorAll('#menuFilterList input[type="checkbox"]');
+      selectedMenuNames = Array.from(checkboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+    };
+    
+    // 전체 선택/해제
+    window.toggleSelectAll = function() {
+      const checkboxes = document.querySelectorAll('#menuFilterList input[type="checkbox"]');
+      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+      
+      checkboxes.forEach(cb => {
+        cb.checked = !allChecked;
+      });
+      
+      updateSelectedMenus();
+    };
 
     // 메뉴 목록 로드 (조리필요여부가 Y이면서 계산완료이고 제공되지 않은 항목)
-    async function loadMenus(filterMenuName = null) {
+    async function loadMenus(filterMenuNames = null) {
       try {
         // 조리필요여부가 Y이면서 계산완료이고 제공되지 않은 주문 조회
         let query = supabase
@@ -218,9 +341,9 @@
           .eq('use_yn', 'Y')
           .order('pay_at', { ascending: true });
 
-        // 특정 메뉴 필터링
-        if (filterMenuName) {
-          query = query.eq('menu_name', filterMenuName);
+        // 선택된 메뉴들로 필터링
+        if (filterMenuNames && filterMenuNames.length > 0) {
+          query = query.in('menu_name', filterMenuNames);
         }
 
         const { data: orders, error: orderError } = await query;
@@ -269,25 +392,53 @@
           const menuItem = document.createElement('div');
           menuItem.className = 'menu-item';
           const menuId = `menu-${index}`;
+          const shouldBeOpen = !closedMenus.has(menuGroup.menu_name);
+          const arrow = shouldBeOpen ? '▲' : '▼';
+          const orderListClass = shouldBeOpen ? 'order-list active' : 'order-list';
+          
+          // 주문 리스트 내용 생성
+          let orderListContent = '';
+          if (shouldBeOpen && menuGroup.orders.length > 0) {
+            // 결제일시 오름차순 정렬
+            menuGroup.orders.sort((a, b) => {
+              const dateA = new Date(a.pay_at || a.created_at);
+              const dateB = new Date(b.pay_at || b.created_at);
+              return dateA - dateB;
+            });
+            
+            orderListContent = menuGroup.orders.map(order => `
+              <div class="order-card">
+                <div class="order-header">
+                  <div class="order-table">테이블 ${order.table_no}</div>
+                  <div class="order-qty">수량: ${order.qty}</div>
+                </div>
+                <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                  결제일시: ${order.pay_at ? formatDateTime(order.pay_at) : '-'}
+                </div>
+                <div style="font-size: 14px; margin-bottom: 8px;">
+                  <span style="font-weight: bold; ${order.ready_yn === 'Y' ? 'color: #007bff;' : 'color: #dc3545;'}">조리여부: ${order.ready_yn === 'Y' ? '완료' : '미완료'}</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn btn-success" style="flex: 1;" onclick="readyOrder(${order.id})">조리완료</button>
+                  <button class="btn btn-warning" style="flex: 1;" onclick="cancelReadyOrder(${order.id})">조리취소</button>
+                </div>
+              </div>
+            `).join('');
+          } else if (shouldBeOpen && menuGroup.orders.length === 0) {
+            orderListContent = '<div class="text-center" style="padding: 16px; color: #999;">주문이 없습니다.</div>';
+          }
+          
           menuItem.innerHTML = `
             <div class="menu-name" onclick="selectMenu('${menuGroup.menu_name.replace(/'/g, "\\'")}')">
-              ${menuGroup.menu_name} (총 ${menuGroup.total_qty}개) ▼
+              ${menuGroup.menu_name} (총 ${menuGroup.total_qty}개) ${arrow}
             </div>
-            <div id="orders-${index}" class="order-list"></div>
+            <div id="orders-${index}" class="${orderListClass}">${orderListContent}</div>
           `;
           menuList.appendChild(menuItem);
         });
 
         // 메뉴 그룹 정보 저장
         window.menuGroups = sortedMenus;
-
-        // 특정 메뉴 필터링 시 자동으로 트리 열기
-        if (autoExpandMenu) {
-          setTimeout(() => {
-            selectMenu(autoExpandMenu, true);
-            autoExpandMenu = null;
-          }, 100);
-        }
       } catch (error) {
         console.error('메뉴 로드 오류:', error);
         alert('메뉴를 불러오는 중 오류가 발생했습니다.');
@@ -309,22 +460,18 @@
       const orderList = menuItem.nextElementSibling;
       const isActive = orderList.classList.contains('active');
 
-      // 자동 확장이 아닌 경우 토글 처리
+      // 자동 확장이 아닌 경우 토글 처리 (사용자가 직접 클릭한 경우)
       if (!autoExpand) {
-        // 모든 주문 리스트 닫기
-        document.querySelectorAll('.order-list').forEach(list => {
-          list.classList.remove('active');
-        });
-        
-        // 모든 메뉴 이름의 화살표를 ▼로 변경
-        document.querySelectorAll('.menu-name').forEach(name => {
-          name.textContent = name.textContent.replace('▲', '▼');
-        });
-
-        // 이미 열려있던 메뉴를 다시 클릭한 경우 닫기만 하고 종료
+        // 이미 열려있던 메뉴를 다시 클릭한 경우 닫기
         if (isActive) {
+          orderList.classList.remove('active');
+          menuItem.textContent = menuItem.textContent.replace('▲', '▼');
+          closedMenus.add(menuName); // 닫은 메뉴 기록
           return;
         }
+        
+        // 닫혀있던 메뉴를 클릭한 경우 열기
+        closedMenus.delete(menuName); // 다시 열면 닫힌 목록에서 제거
       }
 
       // 결제일시 오름차순 정렬
@@ -368,17 +515,24 @@
 
     // 필터링 함수
     window.filterMenus = async function() {
-      const selectedMenuName = document.getElementById('menuFilter').value;
-      
-      if (selectedMenuName) {
-        // 특정 메뉴 선택 시 자동으로 트리 열기
-        autoExpandMenu = selectedMenuName;
-      } else {
-        autoExpandMenu = null;
-      }
-      
-      await loadMenus(selectedMenuName || null);
+      updateSelectedMenus();
+      await loadMenus(selectedMenuNames.length > 0 ? selectedMenuNames : null);
     };
+    
+    // 데이터 새로고침 (필터 조건 유지)
+    async function refreshData() {
+      await loadMenus(selectedMenuNames.length > 0 ? selectedMenuNames : null);
+    }
+    
+    // 자동 새로고침 시작
+    function startAutoRefresh() {
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+      }
+      autoRefreshInterval = setInterval(() => {
+        refreshData();
+      }, 10000); // 10초마다
+    }
 
     // 조리완료 처리
     window.readyOrder = async function(orderId) {
@@ -388,14 +542,15 @@
         const { error } = await supabase
           .from('order')
           .update({ 
-            ready_yn: 'Y'
+            ready_yn: 'Y',
+            ready_at: new Date().toISOString()
           })
           .eq('id', orderId);
 
         if (error) throw error;
 
         alert('조리완료 처리되었습니다.');
-        location.reload();
+        await refreshData();
       } catch (error) {
         console.error('조리완료 처리 오류:', error);
         alert('조리완료 처리 중 오류가 발생했습니다.');
@@ -410,14 +565,15 @@
         const { error } = await supabase
           .from('order')
           .update({ 
-            ready_yn: 'N'
+            ready_yn: 'N',
+            ready_at: null
           })
           .eq('id', orderId);
 
         if (error) throw error;
 
         alert('조리취소 처리되었습니다.');
-        location.reload();
+        await refreshData();
       } catch (error) {
         console.error('조리취소 처리 오류:', error);
         alert('조리취소 처리 중 오류가 발생했습니다.');
@@ -427,6 +583,14 @@
     // 초기 로드
     loadMenuNames();
     loadMenus();
+    startAutoRefresh();
+    
+    // 페이지 언로드 시 인터벌 정리
+    window.addEventListener('beforeunload', () => {
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+      }
+    });
   </script>
 </body>
 </html>
