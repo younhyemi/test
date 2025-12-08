@@ -79,12 +79,13 @@
         // 사용여부가 Y인 화면만 표시
         const screenMap = {
           'menu': { icon: '📋', title: '메뉴관리' },
-          'orders': { icon: '🍽️', title: '테이블별 주문확인' },
-          'food-kitchen': { icon: '🍳', title: '음식확인(주방)' },
+          'orders': { icon: '🍳', title: '테이블별 주문확인' },
+          'food-kitchen': { icon: '🍽️', title: '음식확인(주방)' },
           'food-serving': { icon: '🍽️', title: '음식확인(서빙)' },
           'food-serving-table': { icon: '🍽️', title: '서빙확인(테이블)' },
           'orders-manager': { icon: '👔', title: '매니저확인(테이블)' },
           'food-manager': { icon: '👔', title: '매니저확인(음식)' },
+          'serving-history': { icon: '📜', title: '제공 히스토리' },
           'payment': { icon: '💰', title: '계산' }
         };
 
@@ -124,12 +125,13 @@
         // 오류 발생 시 기본 메뉴 표시
         const defaultScreens = [
           { key: 'menu', icon: '📋', title: '메뉴관리' },
-          { key: 'orders', icon: '🍽️', title: '테이블별 주문확인' },
-          { key: 'food-kitchen', icon: '🍳', title: '음식확인(주방)' },
+          { key: 'orders', icon: '🍳', title: '테이블별 주문확인' },
+          { key: 'food-kitchen', icon: '🍽️', title: '음식확인(주방)' },
           { key: 'food-serving', icon: '🍽️', title: '음식확인(서빙)' },
           { key: 'food-serving-table', icon: '🍽️', title: '서빙확인(테이블)' },
           { key: 'orders-manager', icon: '👔', title: '매니저확인(테이블)' },
           { key: 'food-manager', icon: '👔', title: '매니저확인(음식)' },
+          { key: 'serving-history', icon: '📜', title: '제공 히스토리' },
           { key: 'payment', icon: '💰', title: '계산' },
           { key: 'screen-management', icon: '⚙️', title: '화면관리' }
         ];

@@ -79,9 +79,10 @@ VALUES
   ('food-kitchen', '음식확인(주방)', 'Y', 3),
   ('food-serving', '음식확인(서빙)', 'Y', 4),
   ('food-serving-table', '서빙확인(테이블)', 'Y', 5),
-  ('orders-manager', '주문확인(매니저)', 'Y', 6),
+  ('orders-manager', '매니저확인(테이블)', 'Y', 6),
   ('food-manager', '매니저확인(음식)', 'Y', 7),
-  ('payment', '계산', 'Y', 8)
+  ('serving-history', '제공 히스토리', 'Y', 8),
+  ('payment', '계산', 'Y', 9)
 ON CONFLICT (screen_key) DO NOTHING;
 
 -- 화면관리 테이블의 updated_at 트리거
