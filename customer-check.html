@@ -223,13 +223,29 @@
     // 주문 내역 로드
     async function loadOrders() {
       try {
-        const { data, error } = await supabase
+        const { data: rawData, error } = await supabase
           .from('order')
           .select('*')
           .eq('table_no', tableNo)
-          .eq('use_yn', 'Y')
-          .order('order_at', { ascending: true })
-          .order('menu_name', { ascending: true });
+          .eq('use_yn', 'Y');
+
+        if (error) throw error;
+
+        // 주문일시, 메뉴순번 순으로 정렬
+        const data = [...rawData].sort((a, b) => {
+          // 먼저 주문일시로 정렬
+          const dateA = new Date(a.order_at || a.created_at);
+          const dateB = new Date(b.order_at || b.created_at);
+          const dateCompare = dateA - dateB;
+          if (dateCompare !== 0) return dateCompare;
+          
+          // 주문일시가 같으면 메뉴순번으로 정렬
+          const orderCompare = (a.menu_order || 0) - (b.menu_order || 0);
+          if (orderCompare !== 0) return orderCompare;
+          
+          // 메뉴순번도 같으면 메뉴명으로 정렬
+          return a.menu_name.localeCompare(b.menu_name);
+        });
 
         if (error) throw error;
 

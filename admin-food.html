@@ -219,7 +219,7 @@
 
     // 조리완료 처리
     window.readyOrder = async function(orderId) {
-      if (!confirm('이 주문을 조리완료 처리하시겠습니까?')) return;
+      if (!confirm('조리완료 처리하시겠습니까?')) return;
 
       try {
         const { error } = await supabase
@@ -231,7 +231,7 @@
 
         if (error) throw error;
 
-        alert('조리완료 처리되었습니다.');
+        //alert('조리완료 처리되었습니다.');
         location.reload();
       } catch (error) {
         console.error('조리완료 처리 오류:', error);
@@ -241,7 +241,7 @@
 
     // 조리취소 처리
     window.cancelReadyOrder = async function(orderId) {
-      if (!confirm('이 주문의 조리를 취소하시겠습니까?')) return;
+      if (!confirm('조리를 취소하시겠습니까?')) return;
 
       try {
         const { error } = await supabase
@@ -253,7 +253,7 @@
 
         if (error) throw error;
 
-        alert('조리취소 처리되었습니다.');
+        //alert('조리취소 처리되었습니다.');
         location.reload();
       } catch (error) {
         console.error('조리취소 처리 오류:', error);

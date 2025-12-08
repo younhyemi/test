@@ -160,7 +160,7 @@
           .from('menu')
           .select('*')
           .eq('sale_yn', 'Y')
-          .order('category', { ascending: true })
+          .order('menu_order', { ascending: true })
           .order('menu_name', { ascending: true });
 
         if (error) throw error;
@@ -237,6 +237,7 @@
             table_no: tableNo,
             category: menu.category || '',
             menu_name: menu.menu_name,
+            menu_order: menu.menu_order || 0,
             price: menu.price,
             qty: quantities[menu.id],
             order_at: new Date().toISOString(),

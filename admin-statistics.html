@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>통계</title>
+  <link rel="stylesheet" href="/styles/common.css">
+  <style>
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .refresh-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .refresh-btn:hover {
+      background: #e0e0e0;
+    }
+    
+    .back-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    
+    .statistics-list {
+      margin-bottom: 24px;
+    }
+    
+    .statistics-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .statistics-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .menu-category {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    
+    .menu-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .statistics-info {
+      display: flex;
+      gap: 24px;
+      font-size: 16px;
+    }
+    
+    .statistics-qty {
+      color: #007bff;
+      font-weight: 600;
+    }
+    
+    .statistics-amount {
+      color: #28a745;
+      font-weight: 600;
+    }
+    
+    .total-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 24px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .total-title {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    
+    .total-info {
+      display: flex;
+      gap: 32px;
+      font-size: 18px;
+    }
+    
+    .total-qty {
+      font-weight: 600;
+    }
+    
+    .total-amount {
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-left">
+        <button class="back-btn" onclick="window.location.href='admin.html'">←</button>
+        <h1 style="font-size: 24px; font-weight: bold;">통계</h1>
+      </div>
+      <button class="refresh-btn" onclick="loadStatistics()" title="새로고침">🔄</button>
+    </div>
+    
+    <div id="statisticsList" class="statistics-list">
+      <!-- 통계 리스트가 여기에 동적으로 추가됩니다 -->
+    </div>
+    
+    <div id="totalCard" class="total-card">
+      <!-- 전체 합산이 여기에 동적으로 추가됩니다 -->
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/config/supabase.js';
+    import { formatPrice } from '/utils/helpers.js';
+
+    // 통계 로드
+    async function loadStatistics() {
+      try {
+        // 결제완료된 주문만 조회
+        const { data: orders, error } = await supabase
+          .from('order')
+          .select('*')
+          .eq('pay_yn', 'Y')
+          .eq('use_yn', 'Y');
+
+        if (error) throw error;
+
+        // 메뉴별로 그룹핑하여 수량과 금액 합산
+        const menuStats = {};
+        orders.forEach(order => {
+          const key = `${order.category}|${order.menu_name}`;
+          if (!menuStats[key]) {
+            menuStats[key] = {
+              category: order.category || '',
+              menu_name: order.menu_name,
+              menu_order: order.menu_order || 0,
+              total_qty: 0,
+              total_amount: 0
+            };
+          }
+          menuStats[key].total_qty += order.qty;
+          menuStats[key].total_amount += order.price * order.qty;
+        });
+
+        // 메뉴순번 순으로 정렬
+        const sortedStats = Object.values(menuStats).sort((a, b) => {
+          const orderCompare = (a.menu_order || 0) - (b.menu_order || 0);
+          if (orderCompare !== 0) return orderCompare;
+          return a.menu_name.localeCompare(b.menu_name);
+        });
+
+        const statisticsList = document.getElementById('statisticsList');
+        statisticsList.innerHTML = '';
+
+        if (sortedStats.length === 0) {
+          statisticsList.innerHTML = '<div class="text-center" style="padding: 24px; color: #999;">통계 데이터가 없습니다.</div>';
+          document.getElementById('totalCard').innerHTML = '';
+          return;
+        }
+
+        // 전체 합산 계산
+        let totalQty = 0;
+        let totalAmount = 0;
+        sortedStats.forEach(stat => {
+          totalQty += stat.total_qty;
+          totalAmount += stat.total_amount;
+        });
+
+        // 메뉴별 통계 카드 생성
+        sortedStats.forEach(stat => {
+          const card = document.createElement('div');
+          card.className = 'statistics-card';
+          card.innerHTML = `
+            <div class="statistics-header">
+              <div>
+                <div class="menu-category">${stat.category || ''}</div>
+                <div class="menu-name">${stat.menu_name}</div>
+              </div>
+            </div>
+            <div class="statistics-info">
+              <div class="statistics-qty">판매수량: ${stat.total_qty}개</div>
+              <div class="statistics-amount">판매금액: ${formatPrice(stat.total_amount)}</div>
+            </div>
+          `;
+          statisticsList.appendChild(card);
+        });
+
+        // 전체 합산 카드
+        const totalCard = document.getElementById('totalCard');
+        totalCard.innerHTML = `
+          <div class="total-title">전체 합산</div>
+          <div class="total-info">
+            <div class="total-qty">판매수량: ${totalQty}개</div>
+            <div class="total-amount">판매금액: ${formatPrice(totalAmount)}</div>
+          </div>
+        `;
+      } catch (error) {
+        console.error('통계 로드 오류:', error);
+        alert('통계를 불러오는 중 오류가 발생했습니다.');
+      }
+    }
+
+    // 초기 로드
+    loadStatistics();
+  </script>
+</body>
+</html>
+

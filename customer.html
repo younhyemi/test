@@ -23,7 +23,7 @@
     }
     
     .table-info {
-      font-size: 25px;
+      font-size: 40px;
       color: #007bff;
       font-weight: 600;
     }
@@ -76,8 +76,7 @@
 <body>
   <div class="customer-container">
     <div class="customer-header">
-      <h1 class="customer-title">주문 시스템</h1>
-      <div class="table-info" id="tableInfo">★ 테이블 번호 : - ★</div>
+      <div class="table-info" id="tableInfo">테이블 번호 : -</div>
     </div>
     
     <div class="menu-grid">
@@ -107,7 +106,7 @@
       window.location.href = 'index.html';
     }
 
-    document.getElementById('tableInfo').textContent = `★ 테이블 번호 : ${tableNo} ★`;
+    document.getElementById('tableInfo').textContent = `🧡 테이블 번호 : ${tableNo} 🧡`;
 
     const menuItems = document.querySelectorAll('.menu-item');
     

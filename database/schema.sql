@@ -71,6 +71,20 @@ CREATE INDEX IF NOT EXISTS idx_order_ready_at ON "order"(ready_at);
 ALTER TABLE menu 
 ADD COLUMN IF NOT EXISTS menu_detail TEXT;
 
+-- MENU 테이블에 menu_order 컬럼 추가
+ALTER TABLE menu 
+ADD COLUMN IF NOT EXISTS menu_order INTEGER DEFAULT 0;
+
+-- ORDER 테이블에 menu_order 컬럼 추가
+ALTER TABLE "order" 
+ADD COLUMN IF NOT EXISTS menu_order INTEGER DEFAULT 0;
+
+-- MENU 테이블 category 컬럼 VARCHAR(50) 타입으로 변경
+ALTER TABLE menu ALTER COLUMN category TYPE VARCHAR(50);
+
+-- ORDER 테이블 category 컬럼 VARCHAR(50) 타입으로 변경
+ALTER TABLE "order" ALTER COLUMN category TYPE VARCHAR(50);
+
 -- 화면관리 테이블 생성
 CREATE TABLE IF NOT EXISTS screen_management (
   id BIGSERIAL PRIMARY KEY,
@@ -94,7 +108,8 @@ VALUES
   ('orders-manager', '매니저확인(테이블)', 'Y', 6),
   ('food-manager', '매니저확인(음식)', 'Y', 7),
   ('serving-history', '제공 히스토리', 'Y', 8),
-  ('payment', '계산', 'Y', 9)
+  ('payment', '계산', 'Y', 9),
+  ('statistics', '통계', 'Y', 10)
 ON CONFLICT (screen_key) DO NOTHING;
 
 -- 화면관리 테이블의 updated_at 트리거

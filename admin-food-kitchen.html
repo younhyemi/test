@@ -264,25 +264,26 @@
       try {
         const { data: menuData, error: menuError } = await supabase
           .from('menu')
-          .select('menu_name')
+          .select('menu_name, category, menu_order')
           .eq('cook_required_yn', 'Y')
+          .order('menu_order', { ascending: true })
           .order('menu_name', { ascending: true });
 
         if (menuError) throw menuError;
 
         allMenuNames = menuData.map(m => m.menu_name);
         
-        // 체크박스 리스트에 메뉴 추가
+        // 체크박스 리스트에 메뉴 추가 (카테고리 순으로 이미 정렬됨)
         const menuFilterList = document.getElementById('menuFilterList');
         menuFilterList.innerHTML = '';
         
-        allMenuNames.forEach(menuName => {
+        menuData.forEach(menu => {
           const checkboxItem = document.createElement('div');
           checkboxItem.className = 'filter-checkbox-item';
-          const checkboxId = `menu-checkbox-${menuName.replace(/\s/g, '-')}`;
+          const checkboxId = `menu-checkbox-${menu.menu_name.replace(/\s/g, '-')}`;
           checkboxItem.innerHTML = `
-            <input type="checkbox" id="${checkboxId}" value="${menuName}" onchange="updateSelectedMenus()">
-            <label for="${checkboxId}">${menuName}</label>
+            <input type="checkbox" id="${checkboxId}" value="${menu.menu_name}" onchange="updateSelectedMenus()">
+            <label for="${checkboxId}">${menu.menu_name}</label>
           `;
           menuFilterList.appendChild(checkboxItem);
         });
@@ -357,7 +358,9 @@
         orders.forEach(order => {
           if (!menuGroups[order.menu_name]) {
             menuGroups[order.menu_name] = {
+              category: order.category || '',
               menu_name: order.menu_name,
+              menu_order: order.menu_order || 0,
               total_qty: 0,
               orders: []
             };
@@ -383,10 +386,12 @@
           });
         });
 
-        // 메뉴명 순으로 정렬
-        const sortedMenus = Object.values(menuGroups).sort((a, b) => 
-          a.menu_name.localeCompare(b.menu_name)
-        );
+        // 메뉴순번 순으로 정렬
+        const sortedMenus = Object.values(menuGroups).sort((a, b) => {
+          const orderCompare = (a.menu_order || 0) - (b.menu_order || 0);
+          if (orderCompare !== 0) return orderCompare;
+          return a.menu_name.localeCompare(b.menu_name);
+        });
 
         sortedMenus.forEach((menuGroup, index) => {
           const menuItem = document.createElement('div');
@@ -536,7 +541,7 @@
 
     // 조리완료 처리
     window.readyOrder = async function(orderId) {
-      if (!confirm('조리완료 처리하시겠습니까?')) return;
+      //if (!confirm('조리완료 처리하시겠습니까?')) return;
 
       try {
         const { error } = await supabase
@@ -559,7 +564,7 @@
 
     // 조리취소 처리
     window.cancelReadyOrder = async function(orderId) {
-      if (!confirm('조리를 취소하시겠습니까?')) return;
+      //if (!confirm('조리를 취소하시겠습니까?')) return;
 
       try {
         const { error } = await supabase
