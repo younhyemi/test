@@ -412,7 +412,7 @@
         event.stopPropagation();
       }
 
-      if (!confirm('이 주문을 제공완료 처리하시겠습니까?')) return;
+      if (!confirm('제공완료 처리하시겠습니까?')) return;
 
       try {
         const { error } = await supabase
@@ -425,7 +425,7 @@
 
         if (error) throw error;
 
-        alert('제공완료 처리되었습니다.');
+        //alert('제공완료 처리되었습니다.');
         await refreshData();
       } catch (error) {
         console.error('제공완료 처리 오류:', error);
