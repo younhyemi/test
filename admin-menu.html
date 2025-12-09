@@ -84,6 +84,12 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
+      gap: 12px;
+    }
+    
+    .menu-card-header-left {
+      flex: 1;
+      min-width: 0;
     }
     
     .menu-category {
@@ -98,10 +104,25 @@
       color: #333;
     }
     
+    .menu-detail {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+      line-height: 1.3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      word-break: break-word;
+    }
+    
     .menu-price {
       font-size: 16px;
       color: #007bff;
       font-weight: 600;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     
     .menu-status {
@@ -237,11 +258,11 @@
           const menuOrder = menu.menu_order || 0;
           menuCard.innerHTML = `
             <div class="menu-card-header">
-              <div>
+              <div class="menu-card-header-left">
                 <div class="menu-category">${menu.category || ''}</div>
                 <div class="menu-name">${menu.menu_name}</div>
                 <div style="font-size: 12px; color: #999; margin-top: 4px;">메뉴순번: ${menuOrder}</div>
-                ${menuDetail ? `<div style="font-size: 12px; color: #666; margin-top: 4px;">${menuDetail}</div>` : ''}
+                ${menuDetail ? `<div class="menu-detail">${menuDetail}</div>` : ''}
               </div>
               <div class="menu-price">${formatPrice(menu.price)}</div>
             </div>
