@@ -109,10 +109,29 @@ VALUES
   ('food-manager', '매니저확인(음식)', 'Y', 7),
   ('serving-history', '제공 히스토리', 'Y', 8),
   ('payment', '계산', 'Y', 9),
-  ('statistics', '통계', 'Y', 10)
+  ('statistics', '통계', 'Y', 10),
+  ('close-history', '마감 히스토리', 'Y', 11)
 ON CONFLICT (screen_key) DO NOTHING;
 
 -- 화면관리 테이블의 updated_at 트리거
 CREATE TRIGGER update_screen_management_updated_at BEFORE UPDATE ON screen_management
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ORDER 테이블에 마감여부 컬럼 추가
+ALTER TABLE "order" 
+ADD COLUMN IF NOT EXISTS close_yn CHAR(1) DEFAULT 'N' CHECK (close_yn IN ('Y', 'N'));
+
+-- ORDER 테이블에 마감일시 컬럼 추가
+ALTER TABLE "order" 
+ADD COLUMN IF NOT EXISTS close_at TIMESTAMP WITH TIME ZONE NULL;
+
+-- ORDER 테이블의 close_yn 컬럼에 인덱스 추가
+CREATE INDEX IF NOT EXISTS idx_order_close_yn ON "order"(close_yn);
+
+-- ORDER 테이블에 마감순번 컬럼 추가
+ALTER TABLE "order" 
+ADD COLUMN IF NOT EXISTS close_seq INTEGER NULL;
+
+-- ORDER 테이블의 close_seq 컬럼에 인덱스 추가
+CREATE INDEX IF NOT EXISTS idx_order_close_seq ON "order"(close_seq);
 

@@ -227,7 +227,8 @@
           .from('order')
           .select('*')
           .eq('table_no', tableNo)
-          .eq('use_yn', 'Y');
+          .eq('use_yn', 'Y')
+          .eq('close_yn', 'N');
 
         if (error) throw error;
 

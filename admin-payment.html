@@ -181,6 +181,7 @@
           .from('order')
           .select('table_no')
           .eq('use_yn', 'Y')
+          .eq('close_yn', 'N')
           .order('table_no');
 
         if (error) throw error;
@@ -213,6 +214,7 @@
           .select('*')
           .eq('table_no', tableNo)
           .eq('use_yn', 'Y')
+          .eq('close_yn', 'N')
           .order('order_at', { ascending: false });
 
         if (error) throw error;
@@ -248,6 +250,7 @@
             <div style="display: flex; gap: 8px; margin-bottom: 16px;">
               <button class="btn btn-success payment-btn" style="flex: 1;" onclick="completePayment('${tableNo}')">전체 계산완료</button>
               <button class="btn btn-orange payment-btn" style="flex: 1;" onclick="cancelPayment('${tableNo}')">전체 계산취소</button>
+              <button class="btn btn-danger payment-btn" style="flex: 1; background-color: #dc3545;" onclick="closeTable('${tableNo}')">마감</button>
             </div>
             <div style="background: #e7f3ff; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
               <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">테이블별 금액 정보</div>
@@ -379,6 +382,7 @@
           .select('*')
           .eq('table_no', tableNo)
           .eq('use_yn', 'Y')
+          .eq('close_yn', 'N')
           .order('order_at', { ascending: false });
 
         if (error) throw error;
@@ -416,6 +420,7 @@
             <div style="display: flex; gap: 8px; margin-bottom: 16px;">
               <button class="btn btn-success payment-btn" style="flex: 1;" onclick="completePayment('${tableNo}')">전체 계산완료</button>
               <button class="btn btn-orange payment-btn" style="flex: 1;" onclick="cancelPayment('${tableNo}')">전체 계산취소</button>
+              <button class="btn btn-danger payment-btn" style="flex: 1; background-color: #dc3545;" onclick="closeTable('${tableNo}')">마감</button>
             </div>
             <div style="background: #e7f3ff; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
               <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">테이블별 금액 정보</div>
@@ -511,6 +516,64 @@
       } catch (error) {
         console.error('계산취소 처리 오류:', error);
         alert('계산취소 처리 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 테이블별 마감 처리
+    window.closeTable = async function(tableNo) {
+      try {
+        // 제공여부가 'N'인 주문이 있는지 확인
+        const { data: unservedOrders, error: checkError } = await supabase
+          .from('order')
+          .select('id')
+          .eq('table_no', tableNo)
+          .eq('serve_yn', 'N')
+          .eq('use_yn', 'Y')
+          .eq('close_yn', 'N');
+
+        if (checkError) throw checkError;
+
+        if (unservedOrders && unservedOrders.length > 0) {
+          alert('제공되지 않은 음식이 있습니다. 제공완료 처리해주세요.');
+          return false;
+        }
+
+        // 현재 최대 마감순번 조회
+        const { data: maxSeqData, error: seqError } = await supabase
+          .from('order')
+          .select('close_seq')
+          .not('close_seq', 'is', null)
+          .order('close_seq', { ascending: false })
+          .limit(1);
+
+        if (seqError) throw seqError;
+
+        // 다음 마감순번 계산 (최대값 + 1, 없으면 1)
+        const nextCloseSeq = (maxSeqData && maxSeqData.length > 0 && maxSeqData[0].close_seq !== null)
+          ? maxSeqData[0].close_seq + 1
+          : 1;
+
+        // 제공되지 않은 주문이 없으면 마감 처리
+        const { error } = await supabase
+          .from('order')
+          .update({ 
+            close_yn: 'Y',
+            close_at: new Date().toISOString(),
+            close_seq: nextCloseSeq
+          })
+          .eq('table_no', tableNo)
+          .eq('close_yn', 'N')
+          .eq('use_yn', 'Y');
+
+        if (error) throw error;
+
+        alert('마감 처리되었습니다.');
+        // 테이블 목록에서 제거하기 위해 전체 새로고침
+        await loadTables();
+      } catch (error) {
+        console.error('마감 처리 오류:', error);
+        alert('마감 처리 중 오류가 발생했습니다.');
+        return false;
       }
     };
 

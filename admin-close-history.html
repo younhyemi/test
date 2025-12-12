@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>마감 히스토리</title>
+  <link rel="stylesheet" href="/styles/common.css">
+  <style>
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .refresh-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .refresh-btn:hover {
+      background: #e0e0e0;
+    }
+    
+    .back-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    
+    .table-list {
+      margin-bottom: 24px;
+    }
+    
+    .table-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .table-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .table-name {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .table-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+    
+    .table-summary {
+      display: flex;
+      gap: 16px;
+      font-size: 16px;
+      color: #666;
+    }
+    
+    .table-summary-item {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .table-summary-label {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 4px;
+    }
+    
+    .table-summary-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .close-cancel-btn {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    
+    .close-cancel-btn:hover {
+      background-color: #c82333;
+    }
+    
+    .close-seq-info {
+      font-size: 14px;
+      color: #666;
+      margin-top: 8px;
+    }
+    
+    .close-date-info {
+      font-size: 14px;
+      color: #999;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-left">
+        <button class="back-btn" onclick="window.location.href='admin.html'">←</button>
+        <h1 style="font-size: 24px; font-weight: bold;">마감 히스토리</h1>
+      </div>
+      <button class="refresh-btn" onclick="location.reload()" title="새로고침">🔄</button>
+    </div>
+    
+    <div id="tableList" class="table-list">
+      <!-- 테이블 리스트가 여기에 동적으로 추가됩니다 -->
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/config/supabase.js';
+    import { formatPrice, formatDateTime } from '/utils/helpers.js';
+
+    // 마감된 테이블 목록 로드
+    async function loadClosedTables() {
+      try {
+        // 마감여부가 'Y'인 주문 조회
+        const { data, error } = await supabase
+          .from('order')
+          .select('*')
+          .eq('close_yn', 'Y')
+          .eq('use_yn', 'Y')
+          .order('close_seq', { ascending: false })
+          .order('close_at', { ascending: false });
+
+        if (error) throw error;
+
+        const tableList = document.getElementById('tableList');
+        tableList.innerHTML = '';
+
+        if (data.length === 0) {
+          tableList.innerHTML = '<div class="text-center" style="padding: 24px; color: #999;">마감된 테이블이 없습니다.</div>';
+          return;
+        }
+
+        // 테이블명과 마감순번(close_seq) 기준으로 그룹핑
+        const tableGroups = {};
+        data.forEach(order => {
+          const key = `${order.table_no}_${order.close_seq}`;
+          if (!tableGroups[key]) {
+            tableGroups[key] = {
+              table_no: order.table_no,
+              close_seq: order.close_seq,
+              close_at: order.close_at,
+              total_qty: 0,
+              total_amount: 0,
+              orders: []
+            };
+          }
+          tableGroups[key].total_qty += order.qty;
+          tableGroups[key].total_amount += (order.price * order.qty);
+          tableGroups[key].orders.push(order);
+        });
+
+        // 마감순번 내림차순으로 정렬
+        const sortedGroups = Object.values(tableGroups).sort((a, b) => {
+          // 먼저 마감순번으로 정렬 (내림차순)
+          if (a.close_seq !== b.close_seq) {
+            return (b.close_seq || 0) - (a.close_seq || 0);
+          }
+          // 마감순번이 같으면 마감일시로 정렬 (내림차순)
+          const dateA = new Date(a.close_at || 0);
+          const dateB = new Date(b.close_at || 0);
+          return dateB - dateA;
+        });
+
+        sortedGroups.forEach(group => {
+          const tableCard = document.createElement('div');
+          tableCard.className = 'table-card';
+          tableCard.innerHTML = `
+            <div class="table-name">테이블 ${group.table_no}</div>
+            <div class="table-card-header">
+              <div class="table-info">
+                <div class="table-summary">
+                  <div class="table-summary-item">
+                    <div class="table-summary-label">합산수량</div>
+                    <div class="table-summary-value">${group.total_qty}</div>
+                  </div>
+                  <div class="table-summary-item">
+                    <div class="table-summary-label">합산금액</div>
+                    <div class="table-summary-value">${formatPrice(group.total_amount)}</div>
+                  </div>
+                </div>
+                <div class="close-seq-info">마감순번: ${group.close_seq || '-'}</div>
+                <div class="close-date-info">마감일시: ${group.close_at ? formatDateTime(group.close_at) : '-'}</div>
+              </div>
+              <button class="close-cancel-btn" onclick="cancelClose('${group.table_no}', ${group.close_seq})">마감취소</button>
+            </div>
+          `;
+          tableList.appendChild(tableCard);
+        });
+      } catch (error) {
+        console.error('마감 테이블 로드 오류:', error);
+        alert('마감 테이블을 불러오는 중 오류가 발생했습니다.');
+      }
+    }
+
+    // 마감취소 처리
+    window.cancelClose = async function(tableNo, closeSeq) {
+      if (!confirm(`테이블 ${tableNo}의 마감순번 ${closeSeq} 마감을 취소하시겠습니까?`)) return;
+
+      try {
+        const { error } = await supabase
+          .from('order')
+          .update({ 
+            close_yn: 'N',
+            close_at: null,
+            close_seq: null
+          })
+          .eq('table_no', tableNo)
+          .eq('close_seq', closeSeq)
+          .eq('close_yn', 'Y')
+          .eq('use_yn', 'Y');
+
+        if (error) throw error;
+
+        alert('마감취소 처리되었습니다.');
+        await loadClosedTables();
+      } catch (error) {
+        console.error('마감취소 처리 오류:', error);
+        alert('마감취소 처리 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 초기 로드
+    loadClosedTables();
+  </script>
+</body>
+</html>
+
