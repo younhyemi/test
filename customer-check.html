@@ -175,6 +175,24 @@
       width: 100%;
       margin-top: 16px;
     }
+    
+    .cancel-order-btn {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: clamp(14px, 3vw, 16px);
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 12px;
+      width: 100%;
+      display: block;
+    }
+    
+    .cancel-order-btn:hover {
+      background-color: #c82333;
+    }
   </style>
 </head>
 <body>
@@ -306,6 +324,9 @@
             <div class="order-subtotal">
               소계: ${formatPrice(order.price * order.qty)}
             </div>
+            ${order.pay_yn === 'N' ? `
+              <button class="cancel-order-btn" onclick="cancelOrder(${order.id})">주문취소</button>
+            ` : ''}
           `;
           orderList.appendChild(orderCard);
         });
@@ -340,6 +361,27 @@
         alert('주문 내역을 불러오는 중 오류가 발생했습니다.');
       }
     }
+
+    // 개별 주문취소
+    window.cancelOrder = async function(orderId) {
+      if (!confirm('이 주문을 취소하시겠습니까?')) return;
+
+      try {
+        const { error } = await supabase
+          .from('order')
+          .update({ use_yn: 'N' })
+          .eq('id', orderId)
+          .eq('pay_yn', 'N');
+
+        if (error) throw error;
+
+        alert('주문이 취소되었습니다.');
+        await loadOrders();
+      } catch (error) {
+        console.error('주문취소 오류:', error);
+        alert('주문취소 중 오류가 발생했습니다.');
+      }
+    };
 
     // 전체주문취소
     window.cancelAllOrders = async function() {
