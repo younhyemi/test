@@ -306,14 +306,37 @@
           return;
         }
 
+        // 메뉴명 + 테이블번호로 그룹화하여 수량 합산
+        const groupedOrders = {};
         data.forEach(order => {
+          const key = `${order.menu_name}_${order.table_no}`;
+          if (!groupedOrders[key]) {
+            groupedOrders[key] = {
+              menu_name: order.menu_name,
+              table_no: order.table_no,
+              total_qty: 0,
+              order_ids: []
+            };
+          }
+          groupedOrders[key].total_qty += order.qty;
+          groupedOrders[key].order_ids.push(order.id);
+        });
+
+        // 그룹화된 주문을 배열로 변환하고 정렬
+        const groupedArray = Object.values(groupedOrders).sort((a, b) => {
+          const tableCompare = a.table_no.localeCompare(b.table_no);
+          if (tableCompare !== 0) return tableCompare;
+          return a.menu_name.localeCompare(b.menu_name);
+        });
+
+        groupedArray.forEach(group => {
           const orderCard = document.createElement('div');
           orderCard.className = 'order-card';
           orderCard.innerHTML = `
-            <div class="order-menu-name">${order.menu_name}</div>
+            <div class="order-menu-name">${group.menu_name}</div>
             <div class="order-footer">
-              <div class="order-table">테이블 ${order.table_no}</div>
-              <div class="order-qty">수량: ${order.qty}</div>
+              <div class="order-table">테이블 ${group.table_no}</div>
+              <div class="order-qty">수량: ${group.total_qty}</div>
             </div>
           `;
           preparingList.appendChild(orderCard);
@@ -342,33 +365,42 @@
                  (order.cook_required_yn !== 'Y');
         });
 
-        // 정렬: ready_at 순서대로 (조리필요한 경우 ready_at 사용, 조리불필요한 경우 order_at 사용)
-        const data = [...filteredData].sort((a, b) => {
-          // 조리필요한 경우: ready_at (조리완료일시)
-          // 조리불필요한 경우: order_at (주문등록일시)
-          let dateA, dateB;
+        // 메뉴명 + 테이블번호로 그룹화하여 수량 합산
+        const groupedOrders = {};
+        filteredData.forEach(order => {
+          const key = `${order.menu_name}_${order.table_no}`;
+          if (!groupedOrders[key]) {
+            groupedOrders[key] = {
+              menu_name: order.menu_name,
+              table_no: order.table_no,
+              total_qty: 0,
+              order_ids: [],
+              earliest_date: null
+            };
+          }
+          groupedOrders[key].total_qty += order.qty;
+          groupedOrders[key].order_ids.push(order.id);
           
-          if (a.cook_required_yn === 'Y' && a.ready_yn === 'Y') {
-            // 조리완료일시 사용 (ready_at)
-            dateA = new Date(a.ready_at || a.order_at || a.created_at);
+          // 가장 오래된 날짜 저장 (정렬용)
+          let orderDate;
+          if (order.cook_required_yn === 'Y' && order.ready_yn === 'Y') {
+            orderDate = new Date(order.ready_at || order.order_at || order.created_at);
           } else {
-            // 조리불필요한 경우 주문등록일시 사용
-            dateA = new Date(a.order_at || a.created_at);
+            orderDate = new Date(order.order_at || order.created_at);
           }
           
-          if (b.cook_required_yn === 'Y' && b.ready_yn === 'Y') {
-            // 조리완료일시 사용 (ready_at)
-            dateB = new Date(b.ready_at || b.order_at || b.created_at);
-          } else {
-            // 조리불필요한 경우 주문등록일시 사용
-            dateB = new Date(b.order_at || b.created_at);
+          if (!groupedOrders[key].earliest_date || orderDate < groupedOrders[key].earliest_date) {
+            groupedOrders[key].earliest_date = orderDate;
           }
-          
-          // ready_at 오름차순 정렬 (가장 오래된 것부터)
-          const dateCompare = dateA - dateB;
+        });
+
+        // 그룹화된 주문을 배열로 변환하고 정렬
+        const groupedArray = Object.values(groupedOrders).sort((a, b) => {
+          // 가장 오래된 날짜 기준으로 정렬
+          const dateCompare = a.earliest_date - b.earliest_date;
           if (dateCompare !== 0) return dateCompare;
           
-          // ready_at이 같으면 메뉴명으로 정렬
+          // 날짜가 같으면 메뉴명으로 정렬
           const menuCompare = a.menu_name.localeCompare(b.menu_name);
           if (menuCompare !== 0) return menuCompare;
           
@@ -379,25 +411,25 @@
         const readyList = document.getElementById('readyList');
         readyList.innerHTML = '';
 
-        if (data.length === 0) {
+        if (groupedArray.length === 0) {
           readyList.innerHTML = '<div class="empty-message">준비완료된 주문이 없습니다.</div>';
           return;
         }
 
-        data.forEach(order => {
+        groupedArray.forEach(group => {
           const orderCard = document.createElement('div');
           orderCard.className = 'ready-order-card';
-          orderCard.dataset.orderId = order.id;
+          orderCard.dataset.orderIds = JSON.stringify(group.order_ids);
           
           orderCard.innerHTML = `
             <div class="ready-order-content">
-              <div class="order-menu-name">${order.menu_name}</div>
+              <div class="order-menu-name">${group.menu_name}</div>
               <div class="order-footer">
-                <div class="order-table">테이블 ${order.table_no}</div>
-                <div class="order-qty">수량: ${order.qty}</div>
+                <div class="order-table">테이블 ${group.table_no}</div>
+                <div class="order-qty">수량: ${group.total_qty}</div>
               </div>
             </div>
-            <div class="check-icon" onclick="serveOrder(${order.id}, event)">✓</div>
+            <div class="check-icon" onclick="serveOrderGroup('${group.menu_name}', '${group.table_no}', event)">✓</div>
           `;
           
           readyList.appendChild(orderCard);
@@ -408,7 +440,38 @@
     }
 
 
-    // 제공완료 처리
+    // 제공완료 처리 (그룹 단위)
+    window.serveOrderGroup = async function(menuName, tableNo, event) {
+      if (event) {
+        event.stopPropagation();
+      }
+
+      //if (!confirm('제공완료 처리하시겠습니까?')) return;
+
+      try {
+        const { error } = await supabase
+          .from('order')
+          .update({ 
+            serve_yn: 'Y',
+            serve_at: new Date().toISOString()
+          })
+          .eq('menu_name', menuName)
+          .eq('table_no', tableNo)
+          .eq('pay_yn', 'Y')
+          .eq('serve_yn', 'N')
+          .eq('use_yn', 'Y');
+
+        if (error) throw error;
+
+        //alert('제공완료 처리되었습니다.');
+        await refreshData();
+      } catch (error) {
+        console.error('제공완료 처리 오류:', error);
+        alert('제공완료 처리 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 제공완료 처리 (단일 주문 - 하위 호환성)
     window.serveOrder = async function(orderId, event) {
       if (event) {
         event.stopPropagation();

@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>기부금 관리</title>
+  <link rel="stylesheet" href="/styles/common.css">
+  <style>
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .refresh-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .refresh-btn:hover {
+      background: #e0e0e0;
+    }
+    
+    .back-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: none;
+      background: #f0f0f0;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    
+    .form-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    
+    @media (max-width: 768px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .table-container {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      overflow-x: auto;
+    }
+    
+    .donation-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    
+    .donation-table th,
+    .donation-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .donation-table th {
+      background-color: #f8f9fa;
+      font-weight: 600;
+      color: #333;
+      position: sticky;
+      top: 0;
+    }
+    
+    .donation-table tr:hover {
+      background-color: #f8f9fa;
+    }
+    
+    .donation-table .text-center {
+      text-align: center;
+    }
+    
+    .donation-table .text-right {
+      text-align: right;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .action-buttons .btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      min-width: 60px;
+    }
+    
+    .empty-message {
+      text-align: center;
+      padding: 48px 24px;
+      color: #999;
+    }
+    
+    .error-message {
+      color: #dc3545;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    
+    .summary-section {
+      background: #e7f3ff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 24px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .summary-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    
+    .summary-item {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .summary-label {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    
+    .summary-value {
+      font-size: 20px;
+      font-weight: 600;
+      color: #007bff;
+    }
+    
+    .summary-value-large {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    
+    @media (max-width: 768px) {
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-left">
+        <button class="back-btn" onclick="window.location.href='admin.html'">←</button>
+        <h1 style="font-size: 24px; font-weight: bold;">기부금 관리</h1>
+      </div>
+      <button class="refresh-btn" onclick="location.reload()" title="새로고침">🔄</button>
+    </div>
+    
+    <div class="form-card">
+      <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #333;" id="formTitle">기부금 등록</h2>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="department">부서</label>
+          <input type="text" id="department" class="input" placeholder="부서를 입력하세요" maxlength="100">
+          <div id="departmentError" class="error-message"></div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="name">이름</label>
+          <input type="text" id="name" class="input" placeholder="이름을 입력하세요" maxlength="100">
+          <div id="nameError" class="error-message"></div>
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="amount">기부금</label>
+          <input type="text" id="amount" class="input" placeholder="기부금을 입력하세요" inputmode="numeric">
+          <div id="amountError" class="error-message"></div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="donationType">기부구분</label>
+          <select id="donationType" class="input">
+            <option value="">선택하세요</option>
+            <option value="현금">현금</option>
+            <option value="카드">카드</option>
+            <option value="계좌">계좌</option>
+          </select>
+          <div id="donationTypeError" class="error-message"></div>
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button id="saveBtn" class="btn btn-primary" style="flex: 1;">저장</button>
+        <button id="cancelBtn" class="btn btn-secondary" style="flex: 1; display: none;">취소</button>
+      </div>
+    </div>
+    
+    <div class="table-container">
+      <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #333;">기부금 목록</h2>
+      <div id="donationList">
+        <!-- 기부금 목록이 여기에 동적으로 추가됩니다 -->
+      </div>
+    </div>
+    
+    <div class="summary-section">
+      <div class="summary-title">합계 정보</div>
+      <div class="summary-grid" id="summaryGrid">
+        <!-- 합계 정보가 여기에 동적으로 추가됩니다 -->
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/config/supabase.js';
+    import { formatPrice, formatDateTime } from '/utils/helpers.js';
+
+    let editingDonationId = null;
+    let currentDonationData = [];
+
+    // 숫자만 입력 가능하도록 처리
+    document.getElementById('amount').addEventListener('input', function(e) {
+      // 숫자가 아닌 문자 제거
+      this.value = this.value.replace(/[^0-9]/g, '');
+    });
+
+    // 합계 계산 및 표시
+    function updateSummary(data) {
+      currentDonationData = data || [];
+      
+      const totalCount = currentDonationData.length;
+      const totalAmount = currentDonationData.reduce((sum, donation) => sum + (donation.amount || 0), 0);
+      
+      const cashAmount = currentDonationData
+        .filter(d => d.donation_type === '현금')
+        .reduce((sum, donation) => sum + (donation.amount || 0), 0);
+      
+      const cardAmount = currentDonationData
+        .filter(d => d.donation_type === '카드')
+        .reduce((sum, donation) => sum + (donation.amount || 0), 0);
+      
+      const accountAmount = currentDonationData
+        .filter(d => d.donation_type === '계좌')
+        .reduce((sum, donation) => sum + (donation.amount || 0), 0);
+
+      const summaryGrid = document.getElementById('summaryGrid');
+      summaryGrid.innerHTML = `
+        <div class="summary-item">
+          <div class="summary-label">총 기부 건수</div>
+          <div class="summary-value">${totalCount.toLocaleString()}건</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">전체 기부금 합계</div>
+          <div class="summary-value summary-value-large">${formatPrice(totalAmount)}</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">현금 합계</div>
+          <div class="summary-value">${formatPrice(cashAmount)}</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">카드 합계</div>
+          <div class="summary-value">${formatPrice(cardAmount)}</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">계좌 합계</div>
+          <div class="summary-value">${formatPrice(accountAmount)}</div>
+        </div>
+      `;
+    }
+
+    // 기부금 목록 로드
+    async function loadDonations() {
+      try {
+        const { data, error } = await supabase
+          .from('donation')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const donationList = document.getElementById('donationList');
+        donationList.innerHTML = '';
+
+        // 합계 업데이트 (데이터가 없어도 합계는 표시)
+        updateSummary(data);
+
+        if (data.length === 0) {
+          donationList.innerHTML = '<div class="empty-message">등록된 기부금이 없습니다.</div>';
+          return;
+        }
+
+        // 테이블 생성
+        let tableHTML = `
+          <table class="donation-table">
+            <thead>
+              <tr>
+                <th>번호</th>
+                <th>부서</th>
+                <th>이름</th>
+                <th class="text-right">기부금</th>
+                <th class="text-center">기부구분</th>
+                <th>등록일시</th>
+                <th class="text-center">관리</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        data.forEach((donation, index) => {
+          const escapedDepartment = (donation.department || '').replace(/'/g, "\\'");
+          const escapedName = (donation.name || '').replace(/'/g, "\\'");
+          const escapedType = (donation.donation_type || '').replace(/'/g, "\\'");
+          
+          tableHTML += `
+            <tr>
+              <td>${data.length - index}</td>
+              <td>${donation.department || ''}</td>
+              <td>${donation.name || ''}</td>
+              <td class="text-right">${formatPrice(donation.amount)}</td>
+              <td class="text-center">${donation.donation_type || ''}</td>
+              <td>${formatDateTime(donation.created_at)}</td>
+              <td class="text-center">
+                <div class="action-buttons">
+                  <button class="btn btn-secondary" onclick="editDonation(${donation.id}, '${escapedDepartment}', '${escapedName}', ${donation.amount}, '${escapedType}')">수정</button>
+                  <button class="btn btn-danger" onclick="deleteDonation(${donation.id})">삭제</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+
+        tableHTML += `
+            </tbody>
+          </table>
+        `;
+
+        donationList.innerHTML = tableHTML;
+      } catch (error) {
+        console.error('기부금 로드 오류:', error);
+        alert('기부금 목록을 불러오는 중 오류가 발생했습니다.');
+        // 오류 발생 시에도 합계는 업데이트 (빈 데이터로)
+        updateSummary([]);
+      }
+    }
+
+    // 유효성 검사
+    function validateForm() {
+      const department = document.getElementById('department').value.trim();
+      const name = document.getElementById('name').value.trim();
+      const amount = document.getElementById('amount').value.trim();
+      const donationType = document.getElementById('donationType').value;
+
+      let isValid = true;
+
+      // 부서 검증
+      if (!department) {
+        document.getElementById('departmentError').textContent = '부서를 입력해주세요.';
+        isValid = false;
+      } else {
+        document.getElementById('departmentError').textContent = '';
+      }
+
+      // 이름 검증
+      if (!name) {
+        document.getElementById('nameError').textContent = '이름을 입력해주세요.';
+        isValid = false;
+      } else {
+        document.getElementById('nameError').textContent = '';
+      }
+
+      // 기부금 검증 (숫자만)
+      if (!amount) {
+        document.getElementById('amountError').textContent = '기부금을 입력해주세요.';
+        isValid = false;
+      } else if (!/^\d+$/.test(amount) || parseInt(amount) <= 0) {
+        document.getElementById('amountError').textContent = '올바른 숫자를 입력해주세요. (0보다 큰 정수)';
+        isValid = false;
+      } else {
+        document.getElementById('amountError').textContent = '';
+      }
+
+      // 기부구분 검증
+      if (!donationType) {
+        document.getElementById('donationTypeError').textContent = '기부구분을 선택해주세요.';
+        isValid = false;
+      } else {
+        document.getElementById('donationTypeError').textContent = '';
+      }
+
+      return isValid;
+    }
+
+    // 폼 초기화
+    function resetForm() {
+      document.getElementById('department').value = '';
+      document.getElementById('name').value = '';
+      document.getElementById('amount').value = '';
+      document.getElementById('donationType').value = '';
+      document.getElementById('departmentError').textContent = '';
+      document.getElementById('nameError').textContent = '';
+      document.getElementById('amountError').textContent = '';
+      document.getElementById('donationTypeError').textContent = '';
+      editingDonationId = null;
+      document.getElementById('formTitle').textContent = '기부금 등록';
+      document.getElementById('saveBtn').textContent = '저장';
+      document.getElementById('cancelBtn').style.display = 'none';
+    }
+
+    // 기부금 저장
+    document.getElementById('saveBtn').addEventListener('click', async () => {
+      if (!validateForm()) {
+        return;
+      }
+
+      const department = document.getElementById('department').value.trim();
+      const name = document.getElementById('name').value.trim();
+      const amount = parseInt(document.getElementById('amount').value);
+      const donationType = document.getElementById('donationType').value;
+
+      try {
+        if (editingDonationId) {
+          // 수정
+          const { error } = await supabase
+            .from('donation')
+            .update({
+              department: department,
+              name: name,
+              amount: amount,
+              donation_type: donationType
+            })
+            .eq('id', editingDonationId);
+
+          if (error) throw error;
+        } else {
+          // 신규 등록
+          const { error } = await supabase
+            .from('donation')
+            .insert({
+              department: department,
+              name: name,
+              amount: amount,
+              donation_type: donationType
+            });
+
+          if (error) throw error;
+        }
+
+        resetForm();
+        await loadDonations();
+        alert(editingDonationId ? '수정되었습니다.' : '등록되었습니다.');
+      } catch (error) {
+        console.error('기부금 저장 오류:', error);
+        alert('기부금 저장 중 오류가 발생했습니다.');
+      }
+    });
+
+    // 취소 버튼
+    document.getElementById('cancelBtn').addEventListener('click', () => {
+      resetForm();
+    });
+
+    // 기부금 수정
+    window.editDonation = function(id, department, name, amount, donationType) {
+      editingDonationId = id;
+      document.getElementById('department').value = department;
+      document.getElementById('name').value = name;
+      document.getElementById('amount').value = amount;
+      document.getElementById('donationType').value = donationType;
+      document.getElementById('formTitle').textContent = '기부금 수정';
+      document.getElementById('saveBtn').textContent = '수정';
+      document.getElementById('cancelBtn').style.display = 'block';
+      document.getElementById('department').focus();
+    };
+
+    // 기부금 삭제
+    window.deleteDonation = async function(id) {
+      if (!confirm('정말 이 기부금을 삭제하시겠습니까?')) return;
+
+      try {
+        const { error } = await supabase
+          .from('donation')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        await loadDonations();
+        alert('삭제되었습니다.');
+      } catch (error) {
+        console.error('기부금 삭제 오류:', error);
+        alert('기부금 삭제 중 오류가 발생했습니다.');
+      }
+    };
+
+    // 초기 로드
+    loadDonations();
+  </script>
+</body>
+</html>
+
